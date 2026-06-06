@@ -309,47 +309,10 @@ body {
 .btn-red:hover { background: var(--red); color: #fff; }
 
 /* ─── Unit Map ─────────────────────────────────────────────────────────────── */
-.map-controls { display: flex; gap: 12px; margin-bottom: 20px; justify-content: center; max-width: 780px; margin-left: auto; margin-right: auto; }
-.map-ctrl-btn {
-  padding: 11px 28px; border-radius: 9px;
-  background: var(--surface2); border: 1px solid var(--border);
-  color: var(--text-sub); font-size: 15px; font-weight: 600;
-  cursor: pointer; transition: all 0.15s;
-}
-.map-ctrl-btn.active { color: var(--accent); border-color: var(--accent); background: var(--surface3); }
 
-#map-container {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  overflow: hidden;
-  position: relative;
-  max-width: 780px;
-  margin: 0 auto;
-}
-#map-container img { width: 100%; display: block; }
-#map-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
 
-.map-unit-dot {
-  position: absolute;
-  width: 15px; height: 15px;
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  border: 2px solid #fff;
-  cursor: pointer;
-  pointer-events: all;
-}
-.map-unit-dot.sheriff { background: var(--accent); }
-.map-unit-dot.police  { background: var(--blue); }
-.map-unit-dot.mhp     { background: var(--green); }
 
-.map-tooltip {
-  position: absolute; background: var(--surface);
-  border: 1px solid var(--border); border-radius: 7px;
-  padding: 7px 12px; font-size: 13px; pointer-events: none;
-  transform: translate(-50%, -130%); white-space: nowrap;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-}
+
 
 /* ─── Notes Page ───────────────────────────────────────────────────────────── */
 .notes-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }

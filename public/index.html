@@ -16,9 +16,6 @@
   <button class="nav-btn" id="tab-logs-btn" onclick="showTab('logs')">
     <span class="nav-icon">📋</span> Logs
   </button>
-  <button class="nav-btn" id="tab-unitmap-btn" onclick="showTab('unitmap')">
-    <span class="nav-icon">🗺️</span> Unit Map
-  </button>
   <button class="nav-btn" id="tab-notes-btn" onclick="showTab('notes')">
     <span class="nav-icon">📝</span> Notes
   </button>
@@ -207,19 +204,6 @@
     </div>
     <div class="log-list" id="log-list">
       <div class="empty">Loading...</div>
-    </div>
-  </div>
-
-  <!-- Unit Map Tab -->
-  <div class="tab-page" id="page-unitmap">
-    <div class="section-title">Unit Map — Live</div>
-    <div class="map-controls">
-      <button class="map-ctrl-btn" data-mapmode="sheriff" onclick="setMapMode('sheriff')">🟡 Sheriff Units</button>
-      <button class="map-ctrl-btn" data-mapmode="police"  onclick="setMapMode('police')">🔵 Police Units</button>
-    </div>
-    <div id="map-container">
-      <img id="map-img" src="/api/map-image" alt="ERLC Map">
-      <div id="map-overlay"></div>
     </div>
   </div>
 
