@@ -13,6 +13,9 @@
   <button class="nav-btn active" id="tab-mdt-btn" onclick="showTab('mdt')">
     <span class="nav-icon">🖥️</span> MDT
   </button>
+  <button class="nav-btn" id="tab-search-btn" onclick="showTab('search')">
+    <span class="nav-icon">🔍</span> Search
+  </button>
   <button class="nav-btn" id="tab-logs-btn" onclick="showTab('logs')">
     <span class="nav-icon">📋</span> Logs
   </button>
@@ -21,6 +24,8 @@
   </button>
 
   <div class="nav-spacer"></div>
+
+  <div id="supervisor-badge" style="display:none" class="supervisor-badge">⭐ Supervisor</div>
 
   <div class="nav-user">
     <img id="nav-avatar" alt="Avatar" style="display:none">
@@ -190,9 +195,120 @@
     </div>
   </div>
 
+  <!-- ─── Search Tab ──────────────────────────────────────────────────────── -->
+  <div class="tab-page" id="page-search">
+    <div class="section-title">🔍 Search — Person or Vehicle</div>
+
+    <!-- Search input -->
+    <div class="search-mode-tabs">
+      <button class="search-mode-btn active" id="smode-person" onclick="setSearchMode('person')">👤 Person (Username)</button>
+      <button class="search-mode-btn" id="smode-plate" onclick="setSearchMode('plate')">🚗 Vehicle (License Plate)</button>
+    </div>
+
+    <div class="search-input-wrap">
+      <input type="text" id="search-main-input" placeholder="Enter Roblox username..." autocomplete="off" oninput="onSearchInput()" onkeydown="onSearchKeydown(event)">
+      <button class="search-go-btn" onclick="doSearch()">Search</button>
+      <div class="search-autocomplete" id="search-autocomplete"></div>
+    </div>
+
+    <!-- Results -->
+    <div id="search-results" style="display:none">
+
+      <!-- Person results -->
+      <div id="search-person-results" style="display:none">
+        <div class="search-results-layout">
+          <!-- Left: info -->
+          <div class="search-info-col">
+            <div class="search-person-card">
+              <div class="search-person-name" id="sp-username">—</div>
+              <div class="search-person-robloxid" id="sp-robloxid"></div>
+
+              <div class="search-person-fields">
+                <div class="spf-row"><span class="spf-label">Skin Color</span><span class="spf-value" id="sp-skin">Analyzing...</span></div>
+                <div class="spf-row"><span class="spf-label">Hair Color</span><span class="spf-value" id="sp-hair">Analyzing...</span></div>
+                <div class="spf-row"><span class="spf-label">Height</span><span class="spf-value" id="sp-height">—</span></div>
+                <div class="spf-row"><span class="spf-label">Gender (est.)</span><span class="spf-value" id="sp-gender">—</span></div>
+              </div>
+
+              <div class="search-record-section">
+                <div class="search-record-title">📄 Citations <span class="record-count" id="sp-citation-count">0</span></div>
+                <div id="sp-citations-list" class="record-mini-list"></div>
+              </div>
+              <div class="search-record-section">
+                <div class="search-record-title">🔒 Arrests <span class="record-count arrest" id="sp-arrest-count">0</span></div>
+                <div id="sp-arrests-list" class="record-mini-list"></div>
+              </div>
+              <div class="search-record-section">
+                <div class="search-record-title">⚠️ Active Warrants <span class="record-count warrant" id="sp-warrant-count">0</span></div>
+                <div id="sp-warrants-list" class="record-mini-list"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: mugshot -->
+          <div class="search-mugshot-col">
+            <div class="mugshot-frame">
+              <div class="mugshot-ruler" id="mugshot-ruler"></div>
+              <div class="mugshot-subject">
+                <img id="mugshot-avatar" src="" alt="Avatar" class="mugshot-avatar-img">
+              </div>
+              <div class="mugshot-label" id="mugshot-label">MONTANA MDT</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Plate results -->
+      <div id="search-plate-results" style="display:none">
+        <div class="search-results-layout">
+          <!-- Left: vehicle info -->
+          <div class="search-info-col">
+            <div class="search-person-card">
+              <div class="search-person-name" id="pl-vehicle">—</div>
+              <div class="search-person-fields">
+                <div class="spf-row"><span class="spf-label">License Plate</span><span class="spf-value plate-badge" id="pl-plate">—</span></div>
+                <div class="spf-row"><span class="spf-label">Color</span><span class="spf-value" id="pl-color">—</span></div>
+              </div>
+              <div style="margin-top:20px">
+                <button class="view-owner-btn" id="view-owner-btn" onclick="openOwnerModal()">👤 View Owner</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: vehicle image placeholder -->
+          <div class="search-mugshot-col">
+            <div class="vehicle-img-frame">
+              <div class="vehicle-img-inner" id="vehicle-img-inner">
+                <div class="vehicle-img-placeholder" id="vehicle-img-placeholder">
+                  <div style="font-size:64px">🚗</div>
+                  <div style="margin-top:12px;font-size:13px;color:var(--text-dim)">Vehicle image unavailable</div>
+                  <div style="font-size:11px;color:var(--text-dim);margin-top:4px">Roblox does not expose in-game<br>vehicle images via public API</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Loading state -->
+    <div id="search-loading" style="display:none" class="search-loading">
+      <div class="search-spinner"></div>
+      <div>Searching records...</div>
+    </div>
+
+    <div id="search-empty" style="display:none" class="search-empty">
+      No records found.
+    </div>
+  </div>
+
   <!-- Logs Tab -->
   <div class="tab-page" id="page-logs">
-    <div class="section-title">Logs</div>
+    <div class="logs-page-header">
+      <div class="section-title" style="margin:0;border:none">Logs</div>
+      <button class="export-btn" id="export-btn" style="display:none" onclick="exportLogs()">⬇ Export CSV</button>
+    </div>
     <div class="logs-tabs">
       <button class="log-tab-btn active" data-logtab="citation" onclick="switchLogTab('citation')">Citations</button>
       <button class="log-tab-btn"        data-logtab="arrest"   onclick="switchLogTab('arrest')">Arrests</button>
@@ -232,11 +348,50 @@
 
 </div>
 
+<!-- ─── Owner Modal ─────────────────────────────────────────────────────────── -->
+<div id="owner-modal" class="modal-overlay" style="display:none" onclick="closeOwnerModal(event)">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeOwnerModal()">✕</button>
+    <div class="modal-layout">
+      <div class="modal-info-col">
+        <div class="search-person-name" id="modal-username">—</div>
+        <div class="search-person-robloxid" id="modal-robloxid"></div>
+        <div class="search-person-fields">
+          <div class="spf-row"><span class="spf-label">Skin Color</span><span class="spf-value" id="modal-skin">—</span></div>
+          <div class="spf-row"><span class="spf-label">Hair Color</span><span class="spf-value" id="modal-hair">—</span></div>
+          <div class="spf-row"><span class="spf-label">Height</span><span class="spf-value" id="modal-height">—</span></div>
+          <div class="spf-row"><span class="spf-label">Gender (est.)</span><span class="spf-value" id="modal-gender">—</span></div>
+        </div>
+        <div class="search-record-section">
+          <div class="search-record-title">📄 Citations <span class="record-count" id="modal-citation-count">0</span></div>
+          <div id="modal-citations-list" class="record-mini-list"></div>
+        </div>
+        <div class="search-record-section">
+          <div class="search-record-title">🔒 Arrests <span class="record-count arrest" id="modal-arrest-count">0</span></div>
+          <div id="modal-arrests-list" class="record-mini-list"></div>
+        </div>
+        <div class="search-record-section">
+          <div class="search-record-title">⚠️ Active Warrants <span class="record-count warrant" id="modal-warrant-count">0</span></div>
+          <div id="modal-warrants-list" class="record-mini-list"></div>
+        </div>
+      </div>
+      <div class="modal-mugshot-col">
+        <div class="mugshot-frame">
+          <div class="mugshot-ruler" id="modal-mugshot-ruler"></div>
+          <div class="mugshot-subject">
+            <img id="modal-mugshot-avatar" src="" alt="Avatar" class="mugshot-avatar-img">
+          </div>
+          <div class="mugshot-label">MONTANA MDT</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="toast-container"></div>
 
 <script src="/js/app.js"></script>
 <script>
-  // Patch init to populate dept dropdowns after user loads
   const _origInit = init;
   init = async function() {
     await _origInit();

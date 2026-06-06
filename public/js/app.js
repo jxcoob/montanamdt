@@ -24,26 +24,30 @@ let currentUser      = null;
 let currentTab       = 'mdt';
 let currentLogTab    = 'citation';
 let selectedVehicle  = null;
+let searchMode       = 'person'; // 'person' | 'plate'
+let plateOwnerData   = null;    // cached for modal
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 async function init() {
-  const res  = await fetch('/api/me');
-
-  // If session expired or server restarted, redirect to login
+  const res = await fetch('/api/me');
   if (!res.ok || res.redirected) { window.location.href = '/login'; return; }
 
   currentUser = await res.json();
-
-  // Guard against null/empty session
   if (!currentUser || !currentUser.username) { window.location.href = '/login'; return; }
 
-  // Set user info in nav
   document.getElementById('nav-username').textContent = currentUser.username;
   if (currentUser.avatar) {
-    document.getElementById('nav-avatar').src =
-      `https://cdn.discordapp.com/avatars/${currentUser.id}/${currentUser.avatar}.png?size=64`;
+    const img = document.getElementById('nav-avatar');
+    img.src   = `https://cdn.discordapp.com/avatars/${currentUser.id}/${currentUser.avatar}.png?size=64`;
+    img.style.display = 'block';
   }
-// Check URL params for deep link
+
+  // Show supervisor badge & export button if supervisor
+  if (currentUser.isSupervisor) {
+    document.getElementById('supervisor-badge').style.display = 'flex';
+    document.getElementById('export-btn').style.display = 'inline-flex';
+  }
+
   const params = new URLSearchParams(location.search);
   if (params.get('tab') === 'logs') {
     showTab('logs');
@@ -80,10 +84,8 @@ let activeForm = null;
 function showForm(type) {
   document.querySelectorAll('.form-panel').forEach(p => p.style.display = 'none');
   document.querySelectorAll('.mdt-action-btn').forEach(b => b.classList.remove('active'));
-
   if (activeForm === type) { activeForm = null; return; }
   activeForm = type;
-
   document.getElementById(`form-${type}`).style.display = 'block';
   document.querySelector(`[data-form="${type}"]`).classList.add('active');
 }
@@ -105,10 +107,8 @@ function initVehicleSearch() {
     const q = input.value.trim().toLowerCase();
     dropdown.innerHTML = '';
     if (!q) { dropdown.classList.remove('open'); return; }
-
     const matches = ERLC_VEHICLES.filter(v => v.toLowerCase().includes(q)).slice(0, 12);
     if (!matches.length) { dropdown.classList.remove('open'); return; }
-
     matches.forEach(v => {
       const el = document.createElement('div');
       el.className = 'vehicle-option';
@@ -160,7 +160,6 @@ async function submitCitation(e) {
     body.licensePlate = f.licensePlate.value.trim();
     body.color        = f.color.value.trim();
   }
-
   const res  = await fetch('/api/log/citation', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   const data = await res.json();
   if (data.success) { toast('Citation logged successfully!', 'success'); cancelForm('citation'); f.reset(); }
@@ -213,10 +212,7 @@ async function loadActiveWarrants() {
 function renderActiveWarrants(warrants) {
   const list = document.getElementById('active-warrants-list');
   if (!list) return;
-  if (!warrants.length) {
-    list.innerHTML = '<div class="no-calls">No active warrants.</div>';
-    return;
-  }
+  if (!warrants.length) { list.innerHTML = '<div class="no-calls">No active warrants.</div>'; return; }
   list.innerHTML = warrants.slice().reverse().map(w => `
     <div class="warrant-card">
       <div class="warrant-card-title">⚠️ Warrant — ${escapeHtml(w.username)}</div>
@@ -300,37 +296,53 @@ function renderLogs(logs) {
     let fields = '';
     if (l.type === 'citation') {
       fields = `
-        <div class="log-card-field">Username: <span>${l.username}</span></div>
-        <div class="log-card-field">Cited for: <span>${l.citedFor}</span></div>
-        <div class="log-card-field">Fine amount: <span>$${l.fineAmount}</span></div>
-        ${l.vehicle ? `<div class="log-card-field">Vehicle: <span>${l.vehicle}</span></div><div class="log-card-field">Plate: <span>${l.licensePlate}</span></div><div class="log-card-field">Color: <span>${l.color}</span></div>` : ''}
-        <div class="log-card-field">Department: <span>${l.department}</span></div>
+        <div class="log-card-field">Username: <span>${escapeHtml(l.username)}</span></div>
+        <div class="log-card-field">Cited for: <span>${escapeHtml(l.citedFor)}</span></div>
+        <div class="log-card-field">Fine amount: <span>$${escapeHtml(String(l.fineAmount))}</span></div>
+        ${l.vehicle ? `<div class="log-card-field">Vehicle: <span>${escapeHtml(l.vehicle)}</span></div><div class="log-card-field">Plate: <span>${escapeHtml(l.licensePlate)}</span></div><div class="log-card-field">Color: <span>${escapeHtml(l.color)}</span></div>` : ''}
+        <div class="log-card-field">Department: <span>${escapeHtml(l.department)}</span></div>
       `;
     } else if (l.type === 'arrest') {
       fields = `
-        <div class="log-card-field">Username: <span>${l.username}</span></div>
-        <div class="log-card-field">Charge(s): <span>${l.charges}</span></div>
-        <div class="log-card-field">Department: <span>${l.department}</span></div>
+        <div class="log-card-field">Username: <span>${escapeHtml(l.username)}</span></div>
+        <div class="log-card-field">Charge(s): <span>${escapeHtml(l.charges)}</span></div>
+        <div class="log-card-field">Department: <span>${escapeHtml(l.department)}</span></div>
       `;
     } else if (l.type === 'incident') {
       fields = `
-        <div class="log-card-field">LEO(s): <span>${l.leos}</span></div>
-        <div class="log-card-field">Location: <span>${l.location}</span></div>
-        <div class="log-card-field">Description: <span>${l.description}</span></div>
-        <div class="log-card-field">Department: <span>${l.department}</span></div>
+        <div class="log-card-field">LEO(s): <span>${escapeHtml(l.leos)}</span></div>
+        <div class="log-card-field">Location: <span>${escapeHtml(l.location)}</span></div>
+        <div class="log-card-field">Description: <span>${escapeHtml(l.description)}</span></div>
+        <div class="log-card-field">Department: <span>${escapeHtml(l.department)}</span></div>
       `;
     }
+
+    const voidedBadge = l.voided ? `<span class="voided-badge">VOIDED</span>` : '';
+    const voidBtn = currentUser.isSupervisor && !l.voided
+      ? `<button class="btn-red" onclick="voidLog('${l.id}')">Void Log</button>`
+      : '';
+
     return `
-      <div class="log-card" id="log-${l.id}">
+      <div class="log-card ${l.voided ? 'voided' : ''}" id="log-${l.id}">
         <div class="log-card-body">
           <div class="log-card-id">ID: ${l.id}</div>
-          <div class="log-card-title">${capitalize(l.type)} Log</div>
+          <div class="log-card-title">${capitalize(l.type)} Log ${voidedBadge}</div>
           ${fields}
-          <div class="log-card-meta">Issued by @${l.issuedBy} · ${new Date(l.timestamp).toLocaleString()}</div>
+          <div class="log-card-meta">Issued by @${escapeHtml(l.issuedBy)} · ${new Date(l.timestamp).toLocaleString()}</div>
+          ${l.voided ? `<div class="log-card-meta" style="color:var(--red)">Voided by @${escapeHtml(l.voidedBy)} · ${new Date(l.voidedAt).toLocaleString()}</div>` : ''}
+          <div class="log-card-actions">${voidBtn}</div>
         </div>
       </div>
     `;
   }).join('');
+}
+
+async function voidLog(id) {
+  if (!confirm('Mark this log as voided? This cannot be undone.')) return;
+  const res  = await fetch(`/api/log/${id}/void`, { method: 'PATCH' });
+  const data = await res.json();
+  if (data.success) { toast('Log voided.', 'success'); loadLogs(); }
+  else               toast(data.error || 'Failed.', 'error');
 }
 
 async function renderWarrants(warrants) {
@@ -341,16 +353,16 @@ async function renderWarrants(warrants) {
     <div class="log-card ${w.status === 'completed' ? 'completed' : ''}" id="warrant-${w.id}">
       <div class="log-card-body">
         <div class="log-card-id">ID: ${w.id}</div>
-        <div class="log-card-title">Warrant — ${w.username}</div>
-        <div class="log-card-field">Wanted for: <span>${w.wantedFor}</span></div>
-        ${w.additionalInfo ? `<div class="log-card-field">Additional info: <span>${w.additionalInfo}</span></div>` : ''}
-        <div class="log-card-meta">Issued by @${w.issuedBy} · ${new Date(w.timestamp).toLocaleString()}</div>
+        <div class="log-card-title">Warrant — ${escapeHtml(w.username)}</div>
+        <div class="log-card-field">Wanted for: <span>${escapeHtml(w.wantedFor)}</span></div>
+        ${w.additionalInfo ? `<div class="log-card-field">Additional info: <span>${escapeHtml(w.additionalInfo)}</span></div>` : ''}
+        <div class="log-card-meta">Issued by @${escapeHtml(w.issuedBy)} · ${new Date(w.timestamp).toLocaleString()}</div>
         <div class="log-card-actions">
           ${w.status !== 'completed' ? `<button class="btn-green" onclick="completeWarrant('${w.id}')">✓ Completed</button>` : '<span style="color:var(--green);font-size:12px;font-weight:700;">✓ Completed</span>'}
-          <button class="btn-red" onclick="removeWarrant('${w.id}')">Remove</button>
+          ${currentUser.isSupervisor ? `<button class="btn-red" onclick="removeWarrant('${w.id}')">Remove</button>` : ''}
         </div>
       </div>
-      ${w.headshot ? `<img class="log-card-thumb" src="${w.headshot}" alt="${w.username}">` : ''}
+      ${w.headshot ? `<img class="log-card-thumb" src="${w.headshot}" alt="${escapeHtml(w.username)}">` : ''}
     </div>
   `).join('');
 }
@@ -361,8 +373,17 @@ async function completeWarrant(id) {
 }
 
 async function removeWarrant(id) {
-  await fetch(`/api/warrant/${id}`, { method: 'DELETE' });
-  loadLogs();
+  if (!confirm('Permanently remove this warrant?')) return;
+  const res  = await fetch(`/api/warrant/${id}`, { method: 'DELETE' });
+  const data = await res.json();
+  if (data.success) { toast('Warrant removed.', 'success'); loadLogs(); }
+  else               toast(data.error || 'Failed.', 'error');
+}
+
+// ─── Export CSV ───────────────────────────────────────────────────────────────
+function exportLogs() {
+  const url = `/api/export/logs?type=${currentLogTab !== 'warrant' ? currentLogTab : ''}`;
+  window.open(url, '_blank');
 }
 
 // ─── Notes ────────────────────────────────────────────────────────────────────
@@ -408,9 +429,380 @@ async function archiveNote(id) {
   loadNotes();
 }
 
+// ─── SEARCH TAB ───────────────────────────────────────────────────────────────
+
+function setSearchMode(mode) {
+  searchMode = mode;
+  document.getElementById('smode-person').classList.toggle('active', mode === 'person');
+  document.getElementById('smode-plate').classList.toggle('active', mode === 'plate');
+  document.getElementById('search-main-input').placeholder =
+    mode === 'person' ? 'Enter Roblox username...' : 'Enter license plate (e.g. ABC-1234)...';
+  document.getElementById('search-main-input').value = '';
+  hideSearchResults();
+  closeAutocomplete();
+}
+
+function hideSearchResults() {
+  document.getElementById('search-results').style.display = 'none';
+  document.getElementById('search-person-results').style.display = 'none';
+  document.getElementById('search-plate-results').style.display = 'none';
+  document.getElementById('search-loading').style.display = 'none';
+  document.getElementById('search-empty').style.display = 'none';
+}
+
+// Autocomplete: suggest from citation logs for username / plate
+let allLogs = [];
+async function ensureLogs() {
+  if (!allLogs.length) {
+    const res = await fetch('/api/logs');
+    allLogs   = await res.json();
+  }
+}
+
+async function onSearchInput() {
+  const q = document.getElementById('search-main-input').value.trim().toLowerCase();
+  const ac = document.getElementById('search-autocomplete');
+
+  if (!q || q.length < 2) { ac.classList.remove('open'); ac.innerHTML = ''; return; }
+
+  await ensureLogs();
+
+  let suggestions = [];
+  if (searchMode === 'person') {
+    const usernames = [...new Set(allLogs.map(l => l.username).filter(Boolean))];
+    suggestions = usernames.filter(u => u.toLowerCase().includes(q)).slice(0, 8);
+  } else {
+    const plates = [...new Set(allLogs.map(l => l.licensePlate).filter(Boolean))];
+    suggestions = plates.filter(p => p.toLowerCase().includes(q)).slice(0, 8);
+  }
+
+  if (!suggestions.length) { ac.classList.remove('open'); ac.innerHTML = ''; return; }
+
+  ac.innerHTML = suggestions.map(s => `
+    <div class="search-ac-item" onclick="selectSuggestion('${escapeHtml(s)}')">${escapeHtml(s)}</div>
+  `).join('');
+  ac.classList.add('open');
+}
+
+function selectSuggestion(val) {
+  document.getElementById('search-main-input').value = val;
+  closeAutocomplete();
+  doSearch();
+}
+
+function closeAutocomplete() {
+  const ac = document.getElementById('search-autocomplete');
+  ac.classList.remove('open'); ac.innerHTML = '';
+}
+
+function onSearchKeydown(e) {
+  if (e.key === 'Enter') doSearch();
+  if (e.key === 'Escape') closeAutocomplete();
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.search-input-wrap')) closeAutocomplete();
+});
+
+async function doSearch() {
+  const q = document.getElementById('search-main-input').value.trim();
+  if (!q) return;
+  closeAutocomplete();
+  hideSearchResults();
+  document.getElementById('search-loading').style.display = 'flex';
+
+  try {
+    if (searchMode === 'person') {
+      await searchPerson(q);
+    } else {
+      await searchPlate(q);
+    }
+  } catch (err) {
+    document.getElementById('search-loading').style.display = 'none';
+    document.getElementById('search-empty').style.display = 'block';
+    document.getElementById('search-empty').textContent = 'Error: ' + err.message;
+  }
+}
+
+// ─── Person search ─────────────────────────────────────────────────────────────
+async function searchPerson(username) {
+  const res  = await fetch(`/api/roblox/profile/${encodeURIComponent(username)}`);
+  document.getElementById('search-loading').style.display = 'none';
+
+  if (!res.ok) {
+    document.getElementById('search-empty').style.display = 'block';
+    document.getElementById('search-empty').textContent = 'No records found for that username.';
+    return;
+  }
+
+  const data = await res.json();
+  renderPersonResult(data, 'sp', 'mugshot-avatar', 'mugshot-ruler', 'mugshot-label');
+
+  document.getElementById('search-results').style.display = 'block';
+  document.getElementById('search-person-results').style.display = 'block';
+
+  // AI appearance analysis
+  if (data.fullAvatar) {
+    analyzeAvatarAppearance(data.fullAvatar, data.username, 'sp');
+  }
+}
+
+function renderPersonResult(data, prefix, avatarId, rulerId, labelId) {
+  document.getElementById(`${prefix}-username`).textContent = data.username;
+  document.getElementById(`${prefix}-robloxid`).textContent = data.robloxId ? `Roblox ID: ${data.robloxId}` : '';
+
+  // Height & gender: randomised but stable per username (hash-based)
+  const { gender, height } = estimateHeightGender(data.username);
+  document.getElementById(`${prefix}-height`).textContent  = height;
+  document.getElementById(`${prefix}-gender`).textContent  = capitalize(gender);
+  document.getElementById(`${prefix}-skin`).textContent    = 'Analyzing...';
+  document.getElementById(`${prefix}-hair`).textContent    = 'Analyzing...';
+
+  // Citations
+  const citations = data.citations || [];
+  document.getElementById(`${prefix}-citation-count`).textContent = citations.length;
+  document.getElementById(`${prefix}-citations-list`).innerHTML = citations.length
+    ? citations.slice(-3).reverse().map(c => `
+        <div class="record-mini-item">
+          <strong>${escapeHtml(c.citedFor)}</strong> — $${c.fineAmount}
+          <div style="font-size:11px;color:var(--text-dim);margin-top:2px">${new Date(c.timestamp).toLocaleDateString()}</div>
+        </div>`).join('')
+    : '<div class="record-mini-none">No citations on record.</div>';
+
+  // Arrests
+  const arrests = data.arrests || [];
+  document.getElementById(`${prefix}-arrest-count`).textContent = arrests.length;
+  document.getElementById(`${prefix}-arrests-list`).innerHTML = arrests.length
+    ? arrests.slice(-3).reverse().map(a => `
+        <div class="record-mini-item">
+          <strong>${escapeHtml(a.charges)}</strong>
+          <div style="font-size:11px;color:var(--text-dim);margin-top:2px">${new Date(a.timestamp).toLocaleDateString()}</div>
+        </div>`).join('')
+    : '<div class="record-mini-none">No arrests on record.</div>';
+
+  // Warrants
+  const warrants = data.activeWarrants || [];
+  document.getElementById(`${prefix}-warrant-count`).textContent = warrants.length;
+  document.getElementById(`${prefix}-warrants-list`).innerHTML = warrants.length
+    ? warrants.map(w => `
+        <div class="record-mini-item" style="border-left:3px solid var(--accent)">
+          <strong>${escapeHtml(w.wantedFor)}</strong>
+          <div style="font-size:11px;color:var(--text-dim);margin-top:2px">${new Date(w.timestamp).toLocaleDateString()}</div>
+        </div>`).join('')
+    : '<div class="record-mini-none">No active warrants.</div>';
+
+  // Mugshot
+  const avatarImg = document.getElementById(avatarId);
+  if (data.fullAvatar) {
+    avatarImg.src   = data.fullAvatar;
+    avatarImg.style.display = 'block';
+  } else {
+    avatarImg.style.display = 'none';
+  }
+
+  // Build ruler
+  buildRuler(rulerId, height, gender);
+
+  // Update label
+  const labelEl = document.getElementById(labelId);
+  if (labelEl) labelEl.textContent = `MONTANA MDT · ${data.username.toUpperCase()}`;
+}
+
+// Stable height/gender from username hash
+function estimateHeightGender(username) {
+  let hash = 0;
+  for (let i = 0; i < username.length; i++) hash = (hash * 31 + username.charCodeAt(i)) >>> 0;
+  const gender = hash % 3 === 0 ? 'female' : 'male';
+  let inchTotal;
+  if (gender === 'female') {
+    inchTotal = 48 + (hash % 10); // 4'0" to 4'10"... up to 5'5"
+    inchTotal = 48 + Math.floor(((hash & 0xFFFF) / 0xFFFF) * 21); // 4'0 to 5'9
+    inchTotal = Math.min(69, Math.max(48, 48 + (hash % 22)));
+  } else {
+    inchTotal = 65 + (hash % 11); // 5'5" to 6'3"
+    inchTotal = Math.min(75, Math.max(65, 65 + (hash % 11)));
+  }
+  const ft   = Math.floor(inchTotal / 12);
+  const inch = inchTotal % 12;
+  return { gender, height: `${ft}'${inch}"`, inchTotal };
+}
+
+// Build mugshot ruler marks
+function buildRuler(rulerId, heightStr, gender) {
+  const ruler = document.getElementById(rulerId);
+  if (!ruler) return;
+  // Show 4'10" to 7'0"
+  const marks = [];
+  for (let ft = 7; ft >= 4; ft--) {
+    const maxIn = ft === 4 ? 10 : 11;
+    const minIn = ft === 7 ? 0 : 0;
+    for (let inch = (ft === 7 ? 0 : 11); inch >= (ft === 4 ? 10 : 0); inch--) {
+      if (ft === 7 && inch > 0) continue;
+      const label = inch === 0 ? `${ft}'0"` : (inch % 2 === 0 ? `${ft}'${inch}"` : null);
+      const isMajor = inch === 0;
+      marks.push({ label, isMajor, ft, inch });
+    }
+  }
+
+  // Simplified: just show major marks
+  const majorMarks = [
+    { label: "7'0\"" }, { label: "6'10\"" }, { label: "6'8\"" },
+    { label: "6'6\"" }, { label: "6'4\"" }, { label: "6'2\"" },
+    { label: "6'0\"" }, { label: "5'10\"" }, { label: "5'8\"" },
+    { label: "5'6\"" }, { label: "5'4\"" }, { label: "5'2\"" },
+    { label: "5'0\"" }, { label: "4'10\"" }
+  ];
+
+  ruler.innerHTML = majorMarks.map(m => `
+    <div class="ruler-mark">
+      <span class="ruler-mark-text">${m.label}</span>
+      <div class="ruler-mark-line major"></div>
+    </div>
+  `).join('');
+}
+
+// AI appearance analysis via Anthropic API
+async function analyzeAvatarAppearance(avatarUrl, username, prefix) {
+  try {
+    // Fetch the image as base64
+    const imgRes  = await fetch(avatarUrl);
+    const blob    = await imgRes.blob();
+    const base64  = await blobToBase64(blob);
+    const mtype   = blob.type || 'image/png';
+
+    const apiRes = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 120,
+        messages: [{
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: { type: 'base64', media_type: mtype, data: base64 }
+            },
+            {
+              type: 'text',
+              text: 'This is a Roblox avatar. Respond ONLY with valid JSON, no markdown, no preamble. Format: {"skinColor":"<color description>","hairColor":"<color or None if no visible hair>"}'
+            }
+          ]
+        }]
+      })
+    });
+
+    const apiData = await apiRes.json();
+    const text    = apiData.content?.[0]?.text || '';
+    const clean   = text.replace(/```json|```/g, '').trim();
+    const parsed  = JSON.parse(clean);
+
+    document.getElementById(`${prefix}-skin`).textContent = parsed.skinColor || 'Unknown';
+    document.getElementById(`${prefix}-hair`).textContent = parsed.hairColor || 'Unknown';
+  } catch {
+    document.getElementById(`${prefix}-skin`).textContent = 'Unknown';
+    document.getElementById(`${prefix}-hair`).textContent = 'Unknown';
+  }
+}
+
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload  = () => resolve(r.result.split(',')[1]);
+    r.onerror = reject;
+    r.readAsDataURL(blob);
+  });
+}
+
+// ─── Plate search ──────────────────────────────────────────────────────────────
+async function searchPlate(plate) {
+  const res  = await fetch(`/api/search/plate/${encodeURIComponent(plate.toUpperCase())}`);
+  document.getElementById('search-loading').style.display = 'none';
+
+  if (!res.ok) {
+    document.getElementById('search-empty').style.display = 'block';
+    return;
+  }
+
+  const data = await res.json();
+  if (!data.found) {
+    document.getElementById('search-empty').style.display = 'block';
+    document.getElementById('search-empty').textContent = 'No vehicle found with that plate in citation records.';
+    return;
+  }
+
+  plateOwnerData = data.owner;
+
+  document.getElementById('pl-vehicle').textContent = data.vehicle || 'Unknown Vehicle';
+  document.getElementById('pl-plate').textContent   = data.plate || plate.toUpperCase();
+  document.getElementById('pl-color').textContent   = data.color || '—';
+
+  document.getElementById('search-results').style.display = 'block';
+  document.getElementById('search-plate-results').style.display = 'block';
+}
+
+// ─── Owner Modal ───────────────────────────────────────────────────────────────
+function openOwnerModal() {
+  if (!plateOwnerData) return;
+  const owner = plateOwnerData;
+
+  // Populate modal fields
+  document.getElementById('modal-username').textContent = owner.username;
+  document.getElementById('modal-robloxid').textContent = owner.robloxId ? `Roblox ID: ${owner.robloxId}` : '';
+
+  const { gender, height } = estimateHeightGender(owner.username);
+  document.getElementById('modal-height').textContent  = height;
+  document.getElementById('modal-gender').textContent  = capitalize(gender);
+  document.getElementById('modal-skin').textContent    = 'Analyzing...';
+  document.getElementById('modal-hair').textContent    = 'Analyzing...';
+
+  // Citations
+  const citations = owner.citations || [];
+  document.getElementById('modal-citation-count').textContent = citations.length;
+  document.getElementById('modal-citations-list').innerHTML = citations.length
+    ? citations.slice(-3).reverse().map(c => `<div class="record-mini-item"><strong>${escapeHtml(c.citedFor)}</strong> — $${c.fineAmount}<div style="font-size:11px;color:var(--text-dim);margin-top:2px">${new Date(c.timestamp).toLocaleDateString()}</div></div>`).join('')
+    : '<div class="record-mini-none">No citations on record.</div>';
+
+  const arrests = owner.arrests || [];
+  document.getElementById('modal-arrest-count').textContent = arrests.length;
+  document.getElementById('modal-arrests-list').innerHTML = arrests.length
+    ? arrests.slice(-3).reverse().map(a => `<div class="record-mini-item"><strong>${escapeHtml(a.charges)}</strong><div style="font-size:11px;color:var(--text-dim);margin-top:2px">${new Date(a.timestamp).toLocaleDateString()}</div></div>`).join('')
+    : '<div class="record-mini-none">No arrests on record.</div>';
+
+  const warrants = owner.activeWarrants || [];
+  document.getElementById('modal-warrant-count').textContent = warrants.length;
+  document.getElementById('modal-warrants-list').innerHTML = warrants.length
+    ? warrants.map(w => `<div class="record-mini-item" style="border-left:3px solid var(--accent)"><strong>${escapeHtml(w.wantedFor)}</strong><div style="font-size:11px;color:var(--text-dim);margin-top:2px">${new Date(w.timestamp).toLocaleDateString()}</div></div>`).join('')
+    : '<div class="record-mini-none">No active warrants.</div>';
+
+  // Mugshot
+  const avatarImg = document.getElementById('modal-mugshot-avatar');
+  if (owner.fullAvatar) {
+    avatarImg.src   = owner.fullAvatar;
+    avatarImg.style.display = 'block';
+    analyzeAvatarAppearance(owner.fullAvatar, owner.username, 'modal');
+  } else {
+    avatarImg.style.display = 'none';
+  }
+
+  buildRuler('modal-mugshot-ruler', height, gender);
+
+  document.getElementById('owner-modal').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeOwnerModal(e) {
+  if (e && e.target !== document.getElementById('owner-modal')) return;
+  document.getElementById('owner-modal').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
-function escapeHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escapeHtml(s) {
+  if (s === null || s === undefined) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
 
 function toast(msg, type = 'success') {
   const c   = document.getElementById('toast-container');
@@ -425,9 +817,6 @@ function toast(msg, type = 'success') {
 document.addEventListener('DOMContentLoaded', () => {
   init();
   initVehicleSearch();
-
-  // Populate department dropdowns with only allowed departments
-  // (done after user loads in init via populateDeptDropdowns)
 });
 
 async function populateDeptDropdowns() {

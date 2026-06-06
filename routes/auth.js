@@ -8,21 +8,21 @@ const BASE_URL      = process.env.BASE_URL || 'https://montanamdt.onrender.com';
 const REDIRECT_URI  = `${BASE_URL}/auth/callback`;
 const BOT_TOKEN     = process.env.TOKEN;
 
-// Departments that grant MDT access (CAD tab)
 const MDT_ACCESS_GUILDS = [
     { guildId: '1490470605194137662', roleId: '1499985143853486130', name: 'Missoula City Police Department' },
     { guildId: '1498131736305860708', roleId: '1498131737450905795', name: 'Missoula County Sheriff\'s Office' },
     { guildId: '1490141856607113278', roleId: '1490377039746830372', name: 'Montana Highway Patrol' },
 ];
 
-// Unit map access guilds
 const UNIT_MAP_GUILDS = [
     { guildId: '1490470605194137662', roleId: '1499981495081767034' },
     { guildId: '1498131736305860708', roleId: '1498131737623007374' },
     { guildId: '1490141856607113278', roleId: '1490209610035105802' },
 ];
 
-// ─── Step 1: Redirect to Discord ─────────────────────────────────────────────
+const SUPERVISOR_GUILD_ID = '1490470605194137662';
+const SUPERVISOR_ROLE_ID  = '1469135279049933007';
+
 router.get('/discord', (req, res) => {
     const params = new URLSearchParams({
         client_id:     CLIENT_ID,
@@ -33,13 +33,11 @@ router.get('/discord', (req, res) => {
     res.redirect(`https://discord.com/api/oauth2/authorize?${params}`);
 });
 
-// ─── Step 2: Callback ─────────────────────────────────────────────────────────
 router.get('/callback', async (req, res) => {
     const code = req.query.code;
     if (!code) return res.redirect('/login?error=1');
 
     try {
-        // Exchange code for token
         const tokenRes = await fetch('https://discord.com/api/oauth2/token', {
             method:  'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -56,16 +54,15 @@ router.get('/callback', async (req, res) => {
 
         const accessToken = tokenData.access_token;
 
-        // Get user info
-        const userRes  = await fetch('https://discord.com/api/users/@me', {
+        const userRes = await fetch('https://discord.com/api/users/@me', {
             headers: { Authorization: `Bearer ${accessToken}` },
         });
         const user = await userRes.json();
 
-        // Check MDT access across all guilds using bot token
         let hasAccess     = false;
-        let departments   = []; // which departments they belong to
+        let departments   = [];
         let hasUnitMap    = false;
+        let isSupervisor  = false;
 
         for (const g of MDT_ACCESS_GUILDS) {
             const memberRes = await fetch(
@@ -78,12 +75,15 @@ router.get('/callback', async (req, res) => {
                     hasAccess = true;
                     departments.push({ guildId: g.guildId, name: g.name, roleId: g.roleId });
                 }
+                // Check supervisor role in main server
+                if (g.guildId === SUPERVISOR_GUILD_ID && member.roles && member.roles.includes(SUPERVISOR_ROLE_ID)) {
+                    isSupervisor = true;
+                }
             }
         }
 
         if (!hasAccess) return res.redirect('/denied');
 
-        // Check unit map access
         for (const g of UNIT_MAP_GUILDS) {
             const memberRes = await fetch(
                 `https://discord.com/api/guilds/${g.guildId}/members/${user.id}`,
@@ -104,6 +104,7 @@ router.get('/callback', async (req, res) => {
             avatar:      user.avatar,
             departments,
             hasUnitMap,
+            isSupervisor,
         };
         req.session.loginTime = Date.now();
 

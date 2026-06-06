@@ -8,6 +8,10 @@ const BOT_TOKEN  = process.env.TOKEN;
 const ERLC_KEY   = process.env.ERLC_API_KEY;
 const DATA_DIR   = path.join(__dirname, '..', 'data');
 
+// Supervisor role in main server
+const SUPERVISOR_GUILD_ID = '1490470605194137662'; // main server
+const SUPERVISOR_ROLE_ID  = '1469135279049933007';
+
 const DEPT_CONFIG = {
     'Missoula City Police Department': {
         guildId:    '1490470605194137662',
@@ -74,11 +78,40 @@ async function getRobloxHeadshot(userId) {
     } catch { return null; }
 }
 
+async function getRobloxFullAvatar(userId) {
+    try {
+        const res  = await fetch(`https://thumbnails.roblox.com/v1/users/avatar?userIds=${userId}&size=352x352&format=Png`);
+        const data = await res.json();
+        return data.data?.[0]?.imageUrl || null;
+    } catch { return null; }
+}
+
+// Check if user is supervisor
+async function isSupervisor(userId) {
+    try {
+        const res = await fetch(
+            `https://discord.com/api/guilds/${SUPERVISOR_GUILD_ID}/members/${userId}`,
+            { headers: { Authorization: `Bot ${BOT_TOKEN}` } }
+        );
+        if (!res.ok) return false;
+        const member = await res.json();
+        return member.roles && member.roles.includes(SUPERVISOR_ROLE_ID);
+    } catch { return false; }
+}
+
 // ─── Session / User info ──────────────────────────────────────────────────────
 
 router.get('/me', (req, res) => {
     if (!req.session.user) return res.status(401).json({ error: 'Not authenticated' });
     res.json(req.session.user);
+});
+
+// ─── Supervisor check ─────────────────────────────────────────────────────────
+
+router.get('/me/supervisor', async (req, res) => {
+    if (!req.session.user) return res.status(401).json({ error: 'Not authenticated' });
+    const sup = await isSupervisor(req.session.user.id);
+    res.json({ isSupervisor: sup });
 });
 
 // ─── ERLC ─────────────────────────────────────────────────────────────────────
@@ -89,16 +122,8 @@ router.get('/erlc/players', async (req, res) => {
             headers: { 'server-key': ERLC_KEY },
         });
         const data = await r.json();
-        const players = data.Players || [];
-        // Debug: log raw coords so we can calibrate the map
-        players.forEach(p => {
-            if (p.Location) {
-                console.log('[MAP DEBUG]', (p.Player||'').split(':')[0], '| Team:', p.Team, '| X:', p.Location.LocationX, 'Z:', p.Location.LocationZ, '| Postal:', p.Location.PostalCode);
-            }
-        });
-        res.json(players);
+        res.json(data.Players || []);
     } catch (err) {
-        console.error('[ERLC] Players error:', err.message);
         res.status(500).json({ error: err.message });
     }
 });
@@ -111,7 +136,42 @@ router.get('/erlc/calls', async (req, res) => {
         const data = await r.json();
         res.json(Array.isArray(data.EmergencyCalls) ? data.EmergencyCalls : []);
     } catch (err) {
-        console.error('[ERLC] Calls error:', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.get('/erlc/killlogs', async (req, res) => {
+    try {
+        const r    = await fetch('https://api.erlc.gg/v2/server?KillLogs=true', {
+            headers: { 'server-key': ERLC_KEY },
+        });
+        const data = await r.json();
+        res.json(Array.isArray(data.KillLogs) ? data.KillLogs : []);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.get('/erlc/joinlogs', async (req, res) => {
+    try {
+        const r    = await fetch('https://api.erlc.gg/v2/server?JoinLogs=true', {
+            headers: { 'server-key': ERLC_KEY },
+        });
+        const data = await r.json();
+        res.json(Array.isArray(data.JoinLogs) ? data.JoinLogs : []);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.get('/erlc/server', async (req, res) => {
+    try {
+        const r    = await fetch('https://api.erlc.gg/v2/server', {
+            headers: { 'server-key': ERLC_KEY },
+        });
+        const data = await r.json();
+        res.json(data);
+    } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
@@ -135,7 +195,6 @@ router.post('/log/citation', async (req, res) => {
     const dept = DEPT_CONFIG[department];
     if (!dept) return res.status(400).json({ error: 'Invalid department' });
 
-    // Check user has role for that dept
     const hasDept = user.departments.some(d => d.guildId === dept.guildId);
     if (!hasDept) return res.status(403).json({ error: 'You do not have access to log for that department.' });
 
@@ -173,9 +232,8 @@ router.post('/log/citation', async (req, res) => {
 
     await sendDiscordMessage(dept.channels.citation, payload);
 
-    // Save log
     const logs = readData('logs.json');
-    logs.push({ id, type: 'citation', department, username, citedFor, fineAmount, vehicle: vehicle || null, licensePlate: licensePlate || null, color: color || null, issuedBy: user.username, issuedById: user.id, timestamp: Date.now() });
+    logs.push({ id, type: 'citation', department, username, citedFor, fineAmount, vehicle: vehicle || null, licensePlate: licensePlate || null, color: color || null, issuedBy: user.username, issuedById: user.id, timestamp: Date.now(), voided: false });
     writeData('logs.json', logs);
 
     res.json({ success: true, id });
@@ -225,7 +283,7 @@ router.post('/log/arrest', async (req, res) => {
     await sendDiscordMessage(dept.channels.arrest, payload);
 
     const logs = readData('logs.json');
-    logs.push({ id, type: 'arrest', department, username, charges, issuedBy: user.username, issuedById: user.id, timestamp: Date.now() });
+    logs.push({ id, type: 'arrest', department, username, charges, issuedBy: user.username, issuedById: user.id, timestamp: Date.now(), voided: false });
     writeData('logs.json', logs);
 
     res.json({ success: true, id });
@@ -273,10 +331,29 @@ router.post('/log/incident', async (req, res) => {
     await sendDiscordMessage(dept.channels.incident, payload);
 
     const logs = readData('logs.json');
-    logs.push({ id, type: 'incident', department, leos, location, description, issuedBy: user.username, issuedById: user.id, timestamp: Date.now() });
+    logs.push({ id, type: 'incident', department, leos, location, description, issuedBy: user.username, issuedById: user.id, timestamp: Date.now(), voided: false });
     writeData('logs.json', logs);
 
     res.json({ success: true, id });
+});
+
+// ─── Void a log (supervisor only) ─────────────────────────────────────────────
+
+router.patch('/log/:id/void', async (req, res) => {
+    const user = req.session.user;
+    const sup  = await isSupervisor(user.id);
+    if (!sup) return res.status(403).json({ error: 'Supervisor access required.' });
+
+    const logs = readData('logs.json');
+    const log  = logs.find(l => l.id === req.params.id);
+    if (!log) return res.status(404).json({ error: 'Log not found.' });
+
+    log.voided     = true;
+    log.voidedBy   = user.username;
+    log.voidedById = user.id;
+    log.voidedAt   = Date.now();
+    writeData('logs.json', logs);
+    res.json({ success: true });
 });
 
 // ─── Submit Warrant ───────────────────────────────────────────────────────────
@@ -306,7 +383,10 @@ router.patch('/warrant/:id/complete', (req, res) => {
     res.json({ success: true });
 });
 
-router.delete('/warrant/:id', (req, res) => {
+router.delete('/warrant/:id', async (req, res) => {
+    const user = req.session.user;
+    const sup  = await isSupervisor(user.id);
+    if (!sup) return res.status(403).json({ error: 'Supervisor access required to delete warrants.' });
     let warrants = readData('warrants.json');
     warrants     = warrants.filter(x => x.id !== req.params.id);
     writeData('warrants.json', warrants);
@@ -337,7 +417,7 @@ router.delete('/notes/:id', (req, res) => {
     res.json({ success: true });
 });
 
-// ─── Roblox headshot for warrants ─────────────────────────────────────────────
+// ─── Roblox lookup ────────────────────────────────────────────────────────────
 
 router.get('/roblox/headshot/:username', async (req, res) => {
     const roblox = await getRobloxUser(req.params.username);
@@ -346,7 +426,107 @@ router.get('/roblox/headshot/:username', async (req, res) => {
     res.json({ headshot, url: roblox.url });
 });
 
-// ─── Map image proxy (avoids CORS/hotlink block on PRC CDN) ──────────────────
+// Full profile lookup for Search tab
+router.get('/roblox/profile/:username', async (req, res) => {
+    const username = req.params.username;
+    const roblox   = await getRobloxUser(username);
+    if (!roblox) return res.status(404).json({ error: 'User not found' });
+
+    const [headshot, fullAvatar] = await Promise.all([
+        getRobloxHeadshot(roblox.id),
+        getRobloxFullAvatar(roblox.id),
+    ]);
+
+    // Pull citation/arrest history and warrants for this username
+    const logs     = readData('logs.json');
+    const warrants = readData('warrants.json');
+
+    const citations = logs.filter(l => l.type === 'citation' && l.username.toLowerCase() === username.toLowerCase());
+    const arrests   = logs.filter(l => l.type === 'arrest'   && l.username.toLowerCase() === username.toLowerCase());
+    const activeWarrants = warrants.filter(w => w.username.toLowerCase() === username.toLowerCase() && w.status === 'active');
+
+    res.json({
+        username,
+        robloxId:  roblox.id,
+        robloxUrl: roblox.url,
+        headshot,
+        fullAvatar,
+        citations,
+        arrests,
+        activeWarrants,
+    });
+});
+
+// Plate lookup — searches citation logs for matching plate
+router.get('/search/plate/:plate', async (req, res) => {
+    const plate = req.params.plate.toUpperCase();
+    const logs  = readData('logs.json');
+
+    // Find the most recent citation with this plate
+    const matches = logs
+        .filter(l => l.type === 'citation' && l.licensePlate && l.licensePlate.toUpperCase() === plate)
+        .sort((a, b) => b.timestamp - a.timestamp);
+
+    if (!matches.length) return res.json({ found: false });
+
+    const latest = matches[0];
+    // Also pull full profile for the owner
+    const roblox = await getRobloxUser(latest.username);
+    const [headshot, fullAvatar] = roblox ? await Promise.all([
+        getRobloxHeadshot(roblox.id),
+        getRobloxFullAvatar(roblox.id),
+    ]) : [null, null];
+
+    const allLogs  = readData('logs.json');
+    const warrants = readData('warrants.json');
+
+    const citations = allLogs.filter(l => l.type === 'citation' && l.username.toLowerCase() === latest.username.toLowerCase());
+    const arrests   = allLogs.filter(l => l.type === 'arrest'   && l.username.toLowerCase() === latest.username.toLowerCase());
+    const activeWarrants = warrants.filter(w => w.username.toLowerCase() === latest.username.toLowerCase() && w.status === 'active');
+
+    res.json({
+        found:    true,
+        vehicle:  latest.vehicle,
+        plate:    latest.licensePlate,
+        color:    latest.color,
+        owner: {
+            username:    latest.username,
+            robloxId:    roblox?.id || null,
+            robloxUrl:   roblox?.url || null,
+            headshot,
+            fullAvatar,
+            citations,
+            arrests,
+            activeWarrants,
+        },
+    });
+});
+
+// ─── Log export (supervisor only) ─────────────────────────────────────────────
+
+router.get('/export/logs', async (req, res) => {
+    const user = req.session.user;
+    const sup  = await isSupervisor(user.id);
+    if (!sup) return res.status(403).json({ error: 'Supervisor access required.' });
+
+    const logs = readData('logs.json');
+    const type = req.query.type;
+    const filtered = type ? logs.filter(l => l.type === type) : logs;
+
+    const header = ['id','type','department','username','issuedBy','timestamp','voided','citedFor','fineAmount','vehicle','licensePlate','color','charges','leos','location','description'];
+    const rows = filtered.map(l => header.map(h => {
+        const v = l[h];
+        if (v === undefined || v === null) return '';
+        if (typeof v === 'string' && v.includes(',')) return `"${v.replace(/"/g,'""')}"`;
+        return v;
+    }).join(','));
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="logs-export-${Date.now()}.csv"`);
+    res.send([header.join(','), ...rows].join('\n'));
+});
+
+// ─── Map image proxy ──────────────────────────────────────────────────────────
 router.get('/map-image', (req, res) => {
     res.sendFile(path.join(__dirname, '../public/images/erlc-map.webp'));
 });
