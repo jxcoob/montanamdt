@@ -387,3 +387,8 @@ body {
 
 /* ─── Empty state ──────────────────────────────────────────────────────────── */
 .empty { color: var(--text-dim); font-size: 15px; padding: 28px 0; text-align: center; }
+
+/* ─── Unit Map — smaller size ──────────────────────────────────────────────── */
+#map-container {
+  max-width: 640px;
+}

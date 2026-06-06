@@ -368,11 +368,21 @@ async function removeWarrant(id) {
 
 // ─── Unit Map ─────────────────────────────────────────────────────────────────
 function setMapMode(mode) {
-  if (mapMode === mode) return;
+  // Clear existing interval without nulling mapMode
+  if (mapInterval) { clearInterval(mapInterval); mapInterval = null; }
+  const overlay = document.getElementById('map-overlay');
+  if (overlay) overlay.innerHTML = '';
+
+  // Toggle off if same button clicked
+  if (mapMode === mode) {
+    mapMode = null;
+    document.querySelectorAll('.map-ctrl-btn').forEach(b => b.classList.remove('active'));
+    return;
+  }
+
   mapMode = mode;
   document.querySelectorAll('.map-ctrl-btn').forEach(b => b.classList.remove('active'));
-  document.querySelector(`[data-mapmode="${mode}"]`).classList.add('active');
-  stopMap();
+  document.querySelector('[data-mapmode="' + mode + '"]').classList.add('active');
   fetchMapData();
   mapInterval = setInterval(fetchMapData, 5000);
 }
