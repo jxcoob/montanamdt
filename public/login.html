@@ -4,38 +4,39 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Montana MDT — Login</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Sora:wght@600;700&display=swap" rel="stylesheet">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
-    background: #1a1d2e;
-    font-family: 'Segoe UI', sans-serif;
+    background: #0f0f0f;
+    font-family: 'DM Sans', system-ui, sans-serif;
     display: flex; align-items: center; justify-content: center;
     min-height: 100vh;
-    background-image: radial-gradient(ellipse at center, #1e2340 0%, #0d0f1a 100%);
   }
   .card {
-    background: #1e2340;
-    border: 1px solid #2e3460;
-    border-radius: 12px;
+    background: #161616;
+    border: 1px solid #2e2e2e;
+    border-radius: 10px;
     padding: 48px 40px;
     text-align: center;
     width: 380px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    box-shadow: 0 16px 48px rgba(0,0,0,0.5);
   }
-  h1 { color: #fff; font-size: 20px; font-weight: 700; margin-bottom: 6px; }
-  p { color: #8890b0; font-size: 13px; margin-bottom: 32px; line-height: 1.5; }
+  h1 { color: #d8d8d8; font-family: 'Sora', sans-serif; font-size: 20px; font-weight: 700; margin-bottom: 6px; letter-spacing: 0.3px; }
+  p { color: #707070; font-size: 13px; margin-bottom: 32px; line-height: 1.6; }
   .btn-discord {
     display: inline-flex; align-items: center; gap: 10px;
     background: #5865F2; color: #fff; text-decoration: none;
-    padding: 13px 28px; border-radius: 8px; font-size: 15px; font-weight: 600;
-    transition: background 0.2s;
+    padding: 12px 26px; border-radius: 6px; font-size: 14px; font-weight: 600;
+    transition: background 0.2s; letter-spacing: 0.2px;
   }
   .btn-discord:hover { background: #4752c4; }
-  .btn-discord svg { width: 22px; height: 22px; fill: #fff; }
-  .error { color: #ff6b6b; font-size: 13px; margin-top: 16px; }
-  .expired { color: #ffd166; font-size: 13px; margin-top: 16px; }
-  .divider { border-top: 1px solid #2e3460; margin: 28px 0; }
-  .footer { color: #4a5080; font-size: 11px; }
+  .btn-discord svg { width: 20px; height: 20px; fill: #fff; }
+  .error { color: #e05555; font-size: 13px; margin-top: 16px; }
+  .expired { color: #d4924a; font-size: 13px; margin-top: 16px; }
+  .divider { border-top: 1px solid #2e2e2e; margin: 28px 0; }
+  .footer { color: #3a3a3a; font-size: 11px; letter-spacing: 0.5px; }
 </style>
 </head>
 <body>
