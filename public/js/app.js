@@ -486,11 +486,11 @@ function renderMapDots(players) {
     // Player field is "Username:RobloxId" — show just the username
     const playerName = (p.Player || '').split(':')[0] || 'Unknown';
     const callsign   = p.Callsign ? ' [' + p.Callsign + ']' : '';
-    const postal     = loc.PostalCode ? ' · ' + loc.PostalCode : '';
+    const postalLabel = loc.PostalCode ? ` · ${loc.PostalCode}` : '';
 
     const tooltip = document.createElement('div');
     tooltip.className = 'map-tooltip';
-    tooltip.textContent = playerName + callsign + postal;
+    tooltip.textContent = playerName + callsign + postalLabel;
     dot.appendChild(tooltip);
 
     dot.addEventListener('mouseenter', () => tooltip.style.display = 'block');
