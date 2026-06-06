@@ -85,17 +85,12 @@ router.get('/me', (req, res) => {
 
 router.get('/erlc/players', async (req, res) => {
     try {
-        const r2   = await fetch('https://api.erlc.gg/v2/server/players', {
+        const r = await fetch('https://api.erlc.gg/v2/server?Players=true', {
             headers: { 'server-key': ERLC_KEY },
         });
-        const data = await r2.json();
-        // Log first player so we can see real field names in server console
-        if (Array.isArray(data) && data.length > 0) {
-            console.log('[ERLC] Sample player object:', JSON.stringify(data[0], null, 2));
-        } else {
-            console.log('[ERLC] Players response:', JSON.stringify(data));
-        }
-        res.json(data);
+        const data = await r.json();
+        const players = data.Players || [];
+        res.json(players);
     } catch (err) {
         console.error('[ERLC] Players error:', err.message);
         res.status(500).json({ error: err.message });
@@ -104,16 +99,13 @@ router.get('/erlc/players', async (req, res) => {
 
 router.get('/erlc/calls', async (req, res) => {
     try {
-        const r    = await fetch('https://api.erlc.gg/v2/server/joinlogs', {
+        const r    = await fetch('https://api.erlc.gg/v2/server?EmergencyCalls=true', {
             headers: { 'server-key': ERLC_KEY },
         });
-        // Try 911 calls endpoint
-        const r2   = await fetch('https://api.erlc.gg/v2/server/callogs', {
-            headers: { 'server-key': ERLC_KEY },
-        });
-        const data = await r2.json();
-        res.json(Array.isArray(data) ? data : []);
+        const data = await r.json();
+        res.json(Array.isArray(data.EmergencyCalls) ? data.EmergencyCalls : []);
     } catch (err) {
+        console.error('[ERLC] Calls error:', err.message);
         res.status(500).json({ error: err.message });
     }
 });

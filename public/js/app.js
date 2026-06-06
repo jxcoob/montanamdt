@@ -259,9 +259,10 @@ function renderCalls(calls) {
   if (!calls.length) { list.innerHTML = '<div class="no-calls">No active 911 calls.</div>'; return; }
   list.innerHTML = calls.map(c => `
     <div class="call-card">
-      <div class="call-card-title">Emergency 911 Call</div>
-      <div class="call-field">📍 Location: <span>${c.Location || c.location || 'Unknown'}</span></div>
-      <div class="call-field">📝 Description: <span>${c.Description || c.description || 'No description'}</span></div>
+      <div class="call-card-title">#${c.CallNumber || '—'} · ${c.Team || 'Unknown'} Call</div>
+      <div class="call-field">📍 Location: <span>${c.PositionDescriptor || 'Unknown'}</span></div>
+      <div class="call-field">📝 Description: <span>${c.Description || 'No description'}</span></div>
+      <div class="call-field">🕐 Time: <span>${c.StartedAt ? new Date(c.StartedAt * 1000).toLocaleTimeString() : 'Unknown'}</span></div>
     </div>
   `).join('');
 }
@@ -417,41 +418,26 @@ function renderMapDots(players) {
 
   overlay.innerHTML = '';
 
-  if (!Array.isArray(players) || !players.length) {
-    const msg = document.createElement('div');
-    msg.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#9499c0;font-size:14px;';
-    msg.textContent = 'No units online';
-    overlay.appendChild(msg);
-    return;
-  }
+  if (!Array.isArray(players) || !players.length) return;
 
-  // ERLC API: Team field can be "Sheriff", "Police", "Civilian", etc.
-  // Support flexible matching for team name variations
-  const isSheriff = (t) => t && (t.toLowerCase().includes('sheriff') || t.toLowerCase().includes('so'));
-  const isPolice  = (t) => t && (t.toLowerCase().includes('police') || t.toLowerCase().includes('pd') || t.toLowerCase().includes('mhp') || t.toLowerCase().includes('patrol'));
-
+  // ERLC API: Team is exactly "Sheriff", "Police", "Civilian", "Fire", etc.
+  // Player field is "Username:RobloxId"
+  // Location fields: p.Location.LocationX and p.Location.LocationZ
   const filtered = players.filter(p => {
-    const team = p.Team || p.team || '';
-    if (mapMode === 'sheriff') return isSheriff(team);
-    if (mapMode === 'police')  return isPolice(team);
+    if (mapMode === 'sheriff') return p.Team === 'Sheriff';
+    if (mapMode === 'police')  return p.Team === 'Police';
     return false;
   });
 
-  if (!filtered.length) {
-    const msg = document.createElement('div');
-    msg.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#9499c0;font-size:14px;';
-    msg.textContent = 'No ' + (mapMode === 'sheriff' ? 'Sheriff' : 'Police') + ' units online';
-    overlay.appendChild(msg);
-    return;
-  }
-
   filtered.forEach(p => {
-    // Support both Position object and flat x/z fields
-    const pos = p.Position || p.position || null;
-    const x   = pos ? (pos.x ?? pos.X ?? 0) : (p.x ?? p.X ?? 0);
-    const z   = pos ? (pos.z ?? pos.Z ?? 0) : (p.z ?? p.Z ?? 0);
+    const loc = p.Location;
+    if (!loc) return;
 
-    // ERLC Perpington map bounds
+    const x = loc.LocationX;
+    const z = loc.LocationZ;
+
+    // ERLC Liberty County map coordinate bounds
+    // Approximate: X range -3000 to 3000, Z range -3000 to 3000
     const xNorm = (x + 3000) / 6000;
     const zNorm = (z + 3000) / 6000;
 
@@ -460,9 +446,14 @@ function renderMapDots(players) {
     dot.style.left = Math.min(Math.max(xNorm * 100, 0), 100) + '%';
     dot.style.top  = Math.min(Math.max(zNorm * 100, 0), 100) + '%';
 
+    // Player field is "Username:RobloxId" — show just the username
+    const playerName = (p.Player || '').split(':')[0] || 'Unknown';
+    const callsign   = p.Callsign ? ' [' + p.Callsign + ']' : '';
+    const postal     = loc.PostalCode ? ' · ' + loc.PostalCode : '';
+
     const tooltip = document.createElement('div');
     tooltip.className = 'map-tooltip';
-    tooltip.textContent = (p.Player || p.player || p.Username || p.username || 'Unknown') + (p.Team ? ' [' + p.Team + ']' : '');
+    tooltip.textContent = playerName + callsign + postal;
     dot.appendChild(tooltip);
 
     dot.addEventListener('mouseenter', () => tooltip.style.display = 'block');
