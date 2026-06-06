@@ -41,12 +41,12 @@ body {
 }
 
 .nav-logo {
-  width: 52px; height: 52px;
+  height: 48px;
+  width: auto;
   object-fit: contain;
   border-radius: 0;
   margin-right: 12px;
   flex-shrink: 0;
-  image-rendering: crisp-edges;
 }
 
 .nav-btn {
@@ -84,7 +84,7 @@ body {
   font-weight: 600;
 }
 
-.nav-user img { width: 36px; height: 36px; border-radius: 50%; }
+.nav-user img { width: 36px; height: 36px; border-radius: 50%; display: none; }
 
 .nav-logout {
   padding: 8px 16px;

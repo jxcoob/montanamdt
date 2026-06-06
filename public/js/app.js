@@ -30,7 +30,14 @@ let selectedVehicle  = null;
 // ─── Init ─────────────────────────────────────────────────────────────────────
 async function init() {
   const res  = await fetch('/api/me');
+
+  // If session expired or server restarted, redirect to login
+  if (!res.ok || res.redirected) { window.location.href = '/login'; return; }
+
   currentUser = await res.json();
+
+  // Guard against null/empty session
+  if (!currentUser || !currentUser.username) { window.location.href = '/login'; return; }
 
   // Set user info in nav
   document.getElementById('nav-username').textContent = currentUser.username;

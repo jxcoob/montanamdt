@@ -77,6 +77,7 @@ async function getRobloxHeadshot(userId) {
 // ─── Session / User info ──────────────────────────────────────────────────────
 
 router.get('/me', (req, res) => {
+    if (!req.session.user) return res.status(401).json({ error: 'Not authenticated' });
     res.json(req.session.user);
 });
 
@@ -84,17 +85,19 @@ router.get('/me', (req, res) => {
 
 router.get('/erlc/players', async (req, res) => {
     try {
-        const r    = await fetch('https://api.erlc.gg/v2/server', {
-            headers: { 'server-key': ERLC_KEY },
-            // request Players
-        });
-        // fetch with players
         const r2   = await fetch('https://api.erlc.gg/v2/server/players', {
             headers: { 'server-key': ERLC_KEY },
         });
         const data = await r2.json();
+        // Log first player so we can see real field names in server console
+        if (Array.isArray(data) && data.length > 0) {
+            console.log('[ERLC] Sample player object:', JSON.stringify(data[0], null, 2));
+        } else {
+            console.log('[ERLC] Players response:', JSON.stringify(data));
+        }
         res.json(data);
     } catch (err) {
+        console.error('[ERLC] Players error:', err.message);
         res.status(500).json({ error: err.message });
     }
 });
