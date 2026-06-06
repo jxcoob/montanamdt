@@ -437,8 +437,9 @@ function renderMapDots(players) {
     const z = loc.LocationZ;
 
     // ERLC Fall City map coordinate bounds (Roblox studs)
-    const MAP_X_MIN = -2953, MAP_X_MAX = 2953;
-    const MAP_Z_MIN = -2500, MAP_Z_MAX = 2500;
+    // Calibrated from real player data: X=2151 Z=1823 = postal 1201 (77.8% right, 75.4% down)
+    const MAP_X_MIN = -2362, MAP_X_MAX = 3442;
+    const MAP_Z_MIN = -2314, MAP_Z_MAX = 3174;
     const xNorm = (x - MAP_X_MIN) / (MAP_X_MAX - MAP_X_MIN);
     const zNorm = (z - MAP_Z_MIN) / (MAP_Z_MAX - MAP_Z_MIN);
 
