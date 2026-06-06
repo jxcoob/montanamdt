@@ -540,23 +540,26 @@ async function searchPerson(username) {
 
   document.getElementById('search-results').style.display = 'block';
   document.getElementById('search-person-results').style.display = 'block';
-
-  // AI appearance analysis
-  if (data.fullAvatar) {
-    analyzeAvatarAppearance(data.fullAvatar, data.username, 'sp');
-  }
 }
 
+// ─── Render person result (shared by search and modal) ────────────────────────
 function renderPersonResult(data, prefix, avatarId, rulerId, labelId) {
   document.getElementById(`${prefix}-username`).textContent = data.username;
   document.getElementById(`${prefix}-robloxid`).textContent = data.robloxId ? `Roblox ID: ${data.robloxId}` : '';
 
-  // Height & gender: randomised but stable per username (hash-based)
-  const { gender, height } = estimateHeightGender(data.username);
-  document.getElementById(`${prefix}-height`).textContent  = height;
-  document.getElementById(`${prefix}-gender`).textContent  = capitalize(gender);
-  document.getElementById(`${prefix}-skin`).textContent    = 'Analyzing...';
-  document.getElementById(`${prefix}-hair`).textContent    = 'Analyzing...';
+  // Appearance from server-side AI analysis
+  const ap = data.appearance || {};
+  document.getElementById(`${prefix}-skin`).textContent   = ap.skinColor || 'Unknown';
+  document.getElementById(`${prefix}-hair`).textContent   = ap.hairColor || 'Unknown';
+  document.getElementById(`${prefix}-gender`).textContent = ap.gender    || 'Unknown';
+
+  // Height: hash-based stable value per username, using AI gender to determine range
+  const gender    = (ap.gender || '').toLowerCase();
+  const inchTotal = estimateHeight(data.username, gender);
+  const ft        = Math.floor(inchTotal / 12);
+  const inch      = inchTotal % 12;
+  const heightStr = `${ft}'${inch}"`;
+  document.getElementById(`${prefix}-height`).textContent = heightStr;
 
   // Citations
   const citations = data.citations || [];
@@ -591,127 +594,142 @@ function renderPersonResult(data, prefix, avatarId, rulerId, labelId) {
         </div>`).join('')
     : '<div class="record-mini-none">No active warrants.</div>';
 
-  // Mugshot
+  // Mugshot avatar
   const avatarImg = document.getElementById(avatarId);
   if (data.fullAvatar) {
-    avatarImg.src   = data.fullAvatar;
+    avatarImg.onload = () => positionAvatarForHeight(avatarImg, inchTotal, rulerId);
+    avatarImg.src    = data.fullAvatar;
     avatarImg.style.display = 'block';
   } else {
     avatarImg.style.display = 'none';
   }
 
   // Build ruler
-  buildRuler(rulerId, height, gender);
+  buildRuler(rulerId, inchTotal);
 
-  // Update label
+  // Label
   const labelEl = document.getElementById(labelId);
   if (labelEl) labelEl.textContent = `MONTANA MDT · ${data.username.toUpperCase()}`;
 }
 
-// Stable height/gender from username hash
-function estimateHeightGender(username) {
+// Hash-based stable height using AI gender for range
+function estimateHeight(username, gender) {
   let hash = 0;
   for (let i = 0; i < username.length; i++) hash = (hash * 31 + username.charCodeAt(i)) >>> 0;
-  const gender = hash % 3 === 0 ? 'female' : 'male';
-  let inchTotal;
   if (gender === 'female') {
-    inchTotal = 48 + (hash % 10); // 4'0" to 4'10"... up to 5'5"
-    inchTotal = 48 + Math.floor(((hash & 0xFFFF) / 0xFFFF) * 21); // 4'0 to 5'9
-    inchTotal = Math.min(69, Math.max(48, 48 + (hash % 22)));
+    return Math.min(69, Math.max(58, 58 + (hash % 12))); // 4'10" – 5'9"
   } else {
-    inchTotal = 65 + (hash % 11); // 5'5" to 6'3"
-    inchTotal = Math.min(75, Math.max(65, 65 + (hash % 11)));
+    return Math.min(75, Math.max(65, 65 + (hash % 11))); // 5'5" – 6'3"
   }
-  const ft   = Math.floor(inchTotal / 12);
-  const inch = inchTotal % 12;
-  return { gender, height: `${ft}'${inch}"`, inchTotal };
 }
 
-// Build mugshot ruler marks
-function buildRuler(rulerId, heightStr, gender) {
+// ─── Ruler: 4'10" to 7'0" with even marks ─────────────────────────────────────
+// RULER_TOP_INCH and RULER_BOTTOM_INCH define the range displayed
+const RULER_TOP_INCH    = 84; // 7'0"
+const RULER_BOTTOM_INCH = 58; // 4'10"
+const RULER_RANGE_INCH  = RULER_TOP_INCH - RULER_BOTTOM_INCH; // 26 inches
+
+function buildRuler(rulerId, subjectInchTotal) {
   const ruler = document.getElementById(rulerId);
   if (!ruler) return;
-  // Show 4'10" to 7'0"
+
+  // Marks every 2 inches, labels every foot
   const marks = [];
-  for (let ft = 7; ft >= 4; ft--) {
-    const maxIn = ft === 4 ? 10 : 11;
-    const minIn = ft === 7 ? 0 : 0;
-    for (let inch = (ft === 7 ? 0 : 11); inch >= (ft === 4 ? 10 : 0); inch--) {
-      if (ft === 7 && inch > 0) continue;
-      const label = inch === 0 ? `${ft}'0"` : (inch % 2 === 0 ? `${ft}'${inch}"` : null);
-      const isMajor = inch === 0;
-      marks.push({ label, isMajor, ft, inch });
-    }
+  for (let total = RULER_TOP_INCH; total >= RULER_BOTTOM_INCH; total -= 2) {
+    const ft   = Math.floor(total / 12);
+    const inch = total % 12;
+    const isFoot = inch === 0;
+    marks.push({ label: isFoot ? `${ft}'0"` : (inch % 12 === 0 ? '' : `${ft}'${inch}"`), isFoot, total });
   }
 
-  // Simplified: just show major marks
-  const majorMarks = [
-    { label: "7'0\"" }, { label: "6'10\"" }, { label: "6'8\"" },
-    { label: "6'6\"" }, { label: "6'4\"" }, { label: "6'2\"" },
-    { label: "6'0\"" }, { label: "5'10\"" }, { label: "5'8\"" },
-    { label: "5'6\"" }, { label: "5'4\"" }, { label: "5'2\"" },
-    { label: "5'0\"" }, { label: "4'10\"" }
-  ];
-
-  ruler.innerHTML = majorMarks.map(m => `
-    <div class="ruler-mark">
-      <span class="ruler-mark-text">${m.label}</span>
-      <div class="ruler-mark-line major"></div>
+  ruler.innerHTML = marks.map(m => `
+    <div class="ruler-mark" style="flex:1;display:flex;align-items:center;position:relative;">
+      <span class="ruler-mark-text" style="font-size:${m.isFoot ? '9' : '7'}px;font-weight:${m.isFoot ? '900' : '600'};color:${m.isFoot ? '#111' : '#555'};padding-right:${m.isFoot ? '16' : '14'}px;min-width:38px;text-align:right;font-family:'Arial Narrow',Arial,sans-serif;">${m.label}</span>
+      <div style="position:absolute;right:0;height:${m.isFoot ? '2' : '1'}px;width:${m.isFoot ? '14' : '8'}px;background:${m.isFoot ? '#222' : '#888'};"></div>
     </div>
   `).join('');
 }
 
-// AI appearance analysis via Anthropic API
-async function analyzeAvatarAppearance(avatarUrl, username, prefix) {
-  try {
-    // Fetch the image as base64
-    const imgRes  = await fetch(avatarUrl);
-    const blob    = await imgRes.blob();
-    const base64  = await blobToBase64(blob);
-    const mtype   = blob.type || 'image/png';
+// Position avatar so the top of the head aligns with the correct height mark
+function positionAvatarForHeight(img, inchTotal, rulerId) {
+  const ruler = document.getElementById(rulerId);
+  if (!ruler) return;
 
-    const apiRes = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 120,
-        messages: [{
-          role: 'user',
-          content: [
-            {
-              type: 'image',
-              source: { type: 'base64', media_type: mtype, data: base64 }
-            },
-            {
-              type: 'text',
-              text: 'This is a Roblox avatar. Respond ONLY with valid JSON, no markdown, no preamble. Format: {"skinColor":"<color description>","hairColor":"<color or None if no visible hair>"}'
-            }
-          ]
-        }]
-      })
-    });
+  const rulerH = ruler.offsetHeight;
+  if (!rulerH) return;
 
-    const apiData = await apiRes.json();
-    const text    = apiData.content?.[0]?.text || '';
-    const clean   = text.replace(/```json|```/g, '').trim();
-    const parsed  = JSON.parse(clean);
+  // Calculate where this height falls on the ruler (0 = top=7'0", 1 = bottom=4'10")
+  const fraction = (RULER_TOP_INCH - inchTotal) / RULER_RANGE_INCH;
+  // Pixel Y from top of ruler where this height mark sits
+  const targetY = fraction * rulerH;
 
-    document.getElementById(`${prefix}-skin`).textContent = parsed.skinColor || 'Unknown';
-    document.getElementById(`${prefix}-hair`).textContent = parsed.hairColor || 'Unknown';
-  } catch {
-    document.getElementById(`${prefix}-skin`).textContent = 'Unknown';
-    document.getElementById(`${prefix}-hair`).textContent = 'Unknown';
-  }
-}
+  // The avatar image: we know its natural dimensions once loaded.
+  // We want the top of the head to be at targetY.
+  // The Roblox avatar image has some padding at top (~5% of height) before the head.
+  // Approximate head-top offset within the image: ~8% from top.
+  const imgNaturalH = img.naturalHeight || img.height || 720;
+  const headOffsetFraction = 0.05; // ~5% from top of image to top of head
 
-function blobToBase64(blob) {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload  = () => resolve(r.result.split(',')[1]);
-    r.onerror = reject;
-    r.readAsDataURL(blob);
-  });
+  // The mugshot subject div fills the frame below the ruler in a flex layout.
+  // We need to set margin-top on the img so that headOffsetFraction * imgDisplayH = targetY
+  // img display height is constrained by the container; let's use the container's height.
+  const subject  = img.closest('.mugshot-subject');
+  if (!subject) return;
+  const subjectH = subject.offsetHeight;
+
+  // Scale factor: img fills width of container (320px or 260px)
+  const containerW = subject.offsetWidth - 52; // minus ruler width
+  const imgW       = img.naturalWidth  || 720;
+  const imgH       = img.naturalHeight || 720;
+  const scale      = containerW / imgW;
+  const displayH   = imgH * scale;
+
+  const headPixelInDisplay = displayH * headOffsetFraction;
+
+  // We want: marginTop + headPixelInDisplay = targetY
+  // But targetY is relative to the ruler, which sits above mugshot-subject in the frame.
+  // The ruler and subject share the mugshot-frame height.
+  // Simpler: position the img so its top is pushed down until the head is at the right mark.
+  // Use bottom-anchored approach: img sits at bottom, we lift it.
+  // Distance from bottom of subject to bottom of ruler range = subjectH - (rulerH - targetY)... complex.
+  // Easier: set img height to fill the frame proportionally.
+  // The frame total height = ruler area. Set img to display at correct scale so head aligns.
+
+  // Use a simple approach: set the img max-height to force the body bottom to sit at the bottom of the frame,
+  // and use object-position to push the image so the head is at the right ruler position.
+  // Actually the cleanest: use margin-top to shift img up so head aligns.
+
+  // The mugshot-subject is flex align-items:flex-end, so img sits at bottom.
+  // We don't touch that. Instead use transform: translateY to shift up.
+  // The ruler occupies rulerH pixels. The subject is below it (or alongside).
+  // They're siblings in .mugshot-frame which is flex-column.
+  // subjectH is the height of mugshot-subject.
+  // The frame height = rulerH + subjectH + labelH (~36px).
+  // The ruler starts at y=0 in the frame.
+  // mugshot-subject starts at y = rulerH.
+  // We want the img head (at headOffsetFraction from img top) to be at y = targetY in the frame.
+  // img bottom is at y = rulerH + subjectH (frame bottom - label).
+  // img top = img bottom - displayH = rulerH + subjectH - displayH.
+  // head y = img top + headPixelInDisplay = rulerH + subjectH - displayH + headPixelInDisplay.
+  // We want this = targetY.
+  // => rulerH + subjectH - displayH + headPixelInDisplay = targetY
+  // => headPixelInDisplay - displayH = targetY - rulerH - subjectH
+  // This means we may need to resize the image.
+  // Simplest real fix: set the img height directly so the scale makes the head at the right spot.
+  // displayH_needed: rulerH + subjectH - targetY + headPixelInDisplay_new
+  // headPixelInDisplay_new = displayH_needed * headOffsetFraction
+  // displayH_needed - displayH_needed * headOffsetFraction = rulerH + subjectH - targetY
+  // displayH_needed * (1 - headOffsetFraction) = rulerH + subjectH - targetY
+  // displayH_needed = (rulerH + subjectH - targetY) / (1 - headOffsetFraction)
+
+  const frameBottom  = rulerH + subjectH;
+  const displayHNeeded = (frameBottom - targetY) / (1 - headOffsetFraction);
+
+  img.style.height    = `${Math.round(displayHNeeded)}px`;
+  img.style.width     = 'auto';
+  img.style.maxWidth  = '100%';
+  img.style.maxHeight = 'none';
+  img.style.display   = 'block';
 }
 
 // ─── Plate search ──────────────────────────────────────────────────────────────
