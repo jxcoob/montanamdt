@@ -340,4 +340,23 @@ router.get('/roblox/headshot/:username', async (req, res) => {
     res.json({ headshot, url: roblox.url });
 });
 
+// ─── Map image proxy (avoids CORS/hotlink block on PRC CDN) ──────────────────
+router.get('/map-image', async (req, res) => {
+    try {
+        const r = await fetch('https://api.policeroleplay.community/maps/fall_postals.png', {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (compatible; MDT/1.0)',
+                'Referer': 'https://policeroleplay.community/',
+            }
+        });
+        if (!r.ok) return res.status(r.status).send('Map unavailable');
+        const buf = await r.arrayBuffer();
+        res.set('Content-Type', 'image/png');
+        res.set('Cache-Control', 'public, max-age=3600');
+        res.send(Buffer.from(buf));
+    } catch (err) {
+        res.status(500).send('Map unavailable');
+    }
+});
+
 module.exports = router;
