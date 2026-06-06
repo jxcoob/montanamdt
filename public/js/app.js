@@ -1,22 +1,31 @@
 // ─── ERLC Civilian Vehicles ───────────────────────────────────────────────────
 const ERLC_VEHICLES = [
-  "2021 Dodge Charger", "2022 Ford F-150", "2020 Chevrolet Silverado",
-  "2019 Toyota Camry", "2021 Honda Civic", "2022 Tesla Model 3",
-  "2020 Ford Mustang", "2021 Chevrolet Camaro", "2019 Dodge Ram 1500",
-  "2022 Jeep Wrangler", "2021 GMC Sierra", "2020 Toyota Tacoma",
-  "2019 Ford Explorer", "2021 Chevrolet Tahoe", "2022 Honda CR-V",
-  "2020 Toyota RAV4", "2021 Ford F-250", "2019 Chevrolet Malibu",
-  "2022 Nissan Altima", "2021 Hyundai Elantra", "2020 Kia Optima",
-  "2019 Subaru Outback", "2022 Mazda CX-5", "2021 Toyota Highlander",
-  "2020 Ford Escape", "2021 Dodge Durango", "2022 Chevrolet Equinox",
-  "2019 Ford Edge", "2021 Nissan Rogue", "2020 Honda Pilot",
-  "2022 Jeep Grand Cherokee", "2021 Toyota 4Runner", "2019 Ford Expedition",
-  "2020 Chevrolet Suburban", "2022 GMC Yukon", "2021 RAM 2500",
-  "2020 Dodge Challenger", "2019 Ford Ranger", "2022 Chevrolet Colorado",
-  "2021 Toyota Tundra", "2020 Nissan Frontier", "2019 Honda Ridgeline",
-  "2022 Ford Bronco", "2021 Land Rover Defender", "2020 Mercedes-Benz C300",
-  "2019 BMW 3 Series", "2022 Audi A4", "2021 Volkswagen Jetta",
-  "2020 Subaru Impreza", "2021 Kia Stinger",
+  "4-Wheeler", "Arrow Phoenix Nationals 1977", "Averon Anodic 2024", "Averon Q8 2022",
+  "Averon R8 2017", "Averon RS3 2020", "Averon S5 2010", "BKM Munich 2020",
+  "BKM Risen Roadster 2020", "Bullhorn BH15 2009", "Bullhorn Bus 2012", "Bullhorn Cement Mixer 2015",
+  "Bullhorn Determinator 2008", "Bullhorn Determinator SFP Blackjack Widebody 2022", "Bullhorn Determinator SFP Fury 2022", "Bullhorn Foreman 1988",
+  "Bullhorn Prancer 1969", "Bullhorn Prancer 2011", "Bullhorn Prancer 2015", "Bullhorn Prancer Widebody 2020",
+  "Bullhorn Prisoner Transport 2012", "Bullhorn Pueblo 2018", "Bullhorn School Bus 2008", "Bullhorn Trucker 2014",
+  "Celestial Truckatron 2024", "Celestial Type-6 2023", "Chevlon Amigo LZR 2011", "Chevlon Amigo LZR 2016",
+  "Chevlon Amigo Sport 2016", "Chevlon Antelope 1994", "Chevlon Bread Van 2008", "Chevlon Camion 2002",
+  "Chevlon Camion 2008", "Chevlon Camion 2018", "Chevlon Camion 2021", "Chevlon Camion Dumper 2021",
+  "Chevlon Camion Tow Truck 2021", "Chevlon Captain 2009", "Chevlon Commuter Van 2006", "Chevlon Corbeta 1M Edition 2014",
+  "Chevlon Corbeta 8 2023", "Chevlon Corbeta C2 1967", "Chevlon Corbeta RZR 2014", "Chevlon Corbeta X08 2014",
+  "Chevlon Crane Truck 2016", "Chevlon Garbage Truck 2019", "Chevlon Ice Cream Truck 2003", "Chevlon Inferno 1981",
+  "Chevlon L/15 1981", "Chevlon L/35 Extended 1981", "Chevlon Landslide 2007", "Chevlon Mail Van 2004",
+  "Chevlon Petrol Tanker 2010", "Chevlon Platoro 2019", "Chevlon Revver 2005", "Chevlon Taxi 2009",
+  "Chryslus Champion 2005", "Elysion Slick 2014", "Falcon Advance 100 Holiday Edition 1956", "Falcon Coupe 1934",
+  "Falcon Coupe Hotrod 1934", "Falcon Heritage 2021", "Falcon News Van 2014", "Falcon Rampage Beast 2021",
+  "Falcon Rampage Bigfoot 2-Door 2021", "Falcon Ranger Pickup 2016", "Falcon Scavenger 2016", "Falcon Stallion 350 1969",
+  "Falcon Stallion 350 2015", "Falcon Traveller 2003", "Falcon eStallion 2024", "Ferdinand Jalapeno Turbo 2022",
+  "Kovac Heladera 2023", "Lawn Mower", "Leland Birchwood Hearse 1995", "Leland LTS 2010",
+  "Leland LTS5-V Blackwing 2023", "Leland Vault 2020", "Navara Boundary 2022", "Navara Horizon 2013",
+  "Navara Imperium 2020", "Navara Security Van 2022", "Overland Apache 1995", "Overland Apache 2011",
+  "Overland Apache SFP 2020", "Overland Buckaroo 2018", "Overland Mechanic Truck 2018", "Pea Car 2025",
+  "Sentinel Platinum 1968", "Strugatti Ettore 2020", "Stuttgart Executive 2021", "Stuttgart Landschaft 2022",
+  "Stuttgart Vierturig 2021", "Surrey 650S 2016", "Takeo Experience 2021", "Terrain Traveller 2022",
+  "Vellfire Ambulance 2020", "Vellfire Evertt 1995", "Vellfire Pioneer 2019", "Vellfire Prairie 2022",
+  "Vellfire Prima 2009", "Vellfire Riptide 2020", "Vellfire Runabout 1984",
 ];
 
 // ─── App State ────────────────────────────────────────────────────────────────
@@ -536,30 +545,40 @@ async function searchPerson(username) {
   }
 
   const data = await res.json();
-  renderPersonResult(data, 'sp', 'mugshot-avatar', 'mugshot-ruler', 'mugshot-label');
+  await renderPersonResult(data, 'sp', 'mugshot-avatar', 'mugshot-ruler', 'mugshot-label');
 
   document.getElementById('search-results').style.display = 'block';
   document.getElementById('search-person-results').style.display = 'block';
 }
 
 // ─── Render person result (shared by search and modal) ────────────────────────
-function renderPersonResult(data, prefix, avatarId, rulerId, labelId) {
+// currentProfileUsername tracks who is loaded so Save knows the target
+let currentProfileUsernames = {}; // keyed by prefix
+
+async function renderPersonResult(data, prefix, avatarId, rulerId, labelId) {
+  currentProfileUsernames[prefix] = data.username;
+
   document.getElementById(`${prefix}-username`).textContent = data.username;
   document.getElementById(`${prefix}-robloxid`).textContent = data.robloxId ? `Roblox ID: ${data.robloxId}` : '';
 
-  // Appearance from server-side AI analysis
-  const ap = data.appearance || {};
-  document.getElementById(`${prefix}-skin`).textContent   = ap.skinColor || 'Unknown';
-  document.getElementById(`${prefix}-hair`).textContent   = ap.hairColor || 'Unknown';
-  document.getElementById(`${prefix}-gender`).textContent = ap.gender    || 'Unknown';
-
-  // Height: hash-based stable value per username, using AI gender to determine range
-  const gender    = (ap.gender || '').toLowerCase();
+  // Height: hash-based stable value per username
+  const gender    = '';
   const inchTotal = estimateHeight(data.username, gender);
   const ft        = Math.floor(inchTotal / 12);
   const inch      = inchTotal % 12;
   const heightStr = `${ft}'${inch}"`;
-  document.getElementById(`${prefix}-height`).textContent = heightStr;
+
+  // Load saved overrides, fall back to auto values
+  let overrides = {};
+  try {
+    const ovRes = await fetch(`/api/profile-overrides/${encodeURIComponent(data.username)}`);
+    if (ovRes.ok) overrides = await ovRes.json();
+  } catch (_) {}
+
+  document.getElementById(`${prefix}-skin`).value   = overrides.skin   || 'Unknown';
+  document.getElementById(`${prefix}-hair`).value   = overrides.hair   || 'Unknown';
+  document.getElementById(`${prefix}-height`).value = overrides.height || heightStr;
+  document.getElementById(`${prefix}-gender`).value = overrides.gender || 'Unknown';
 
   // Citations
   const citations = data.citations || [];
@@ -594,22 +613,49 @@ function renderPersonResult(data, prefix, avatarId, rulerId, labelId) {
         </div>`).join('')
     : '<div class="record-mini-none">No active warrants.</div>';
 
-  // Mugshot avatar
+  // Mugshot — headshot only on lined background
   const avatarImg = document.getElementById(avatarId);
-  if (data.fullAvatar) {
-    avatarImg.onload = () => positionAvatarForHeight(avatarImg, inchTotal, rulerId);
-    avatarImg.src    = data.fullAvatar;
+  const headshotUrl = data.headshot || null;
+  if (headshotUrl) {
+    avatarImg.src = headshotUrl;
     avatarImg.style.display = 'block';
   } else {
     avatarImg.style.display = 'none';
   }
 
-  // Build ruler
-  buildRuler(rulerId, inchTotal);
-
   // Label
   const labelEl = document.getElementById(labelId);
   if (labelEl) labelEl.textContent = `MONTANA MDT · ${data.username.toUpperCase()}`;
+}
+
+// ─── Save profile overrides ────────────────────────────────────────────────────
+async function saveProfileOverrides(prefix) {
+  const username = currentProfileUsernames[prefix];
+  if (!username) return;
+
+  const skin   = document.getElementById(`${prefix}-skin`).value.trim();
+  const hair   = document.getElementById(`${prefix}-hair`).value.trim();
+  const height = document.getElementById(`${prefix}-height`).value.trim();
+  const gender = document.getElementById(`${prefix}-gender`).value.trim();
+
+  const btn = document.getElementById(`${prefix}-save-btn`);
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
+
+  try {
+    const res = await fetch(`/api/profile-overrides/${encodeURIComponent(username)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ skin, hair, height, gender }),
+    });
+    if (res.ok) {
+      if (btn) { btn.textContent = '✅ Saved!'; btn.style.background = 'rgba(34,197,94,.2)'; btn.style.borderColor = '#22c55e'; btn.style.color = '#22c55e'; }
+      setTimeout(() => { if (btn) { btn.disabled = false; btn.textContent = '💾 Save Changes'; btn.style.background = ''; btn.style.borderColor = ''; btn.style.color = ''; } }, 2000);
+    } else {
+      throw new Error('Failed');
+    }
+  } catch (_) {
+    if (btn) { btn.disabled = false; btn.textContent = '❌ Error — Retry'; }
+  }
 }
 
 // Hash-based stable height using AI gender for range
@@ -745,7 +791,7 @@ async function searchPlate(plate) {
   const data = await res.json();
   if (!data.found) {
     document.getElementById('search-empty').style.display = 'block';
-    document.getElementById('search-empty').textContent = 'No vehicle found with that plate in citation records.';
+    document.getElementById('search-empty').textContent = 'No vehicle found with that plate in-game or in citation records.';
     return;
   }
 
@@ -755,24 +801,59 @@ async function searchPlate(plate) {
   document.getElementById('pl-plate').textContent   = data.plate || plate.toUpperCase();
   document.getElementById('pl-color').textContent   = data.color || '—';
 
+  // Show or hide the live in-game badge
+  let liveEl = document.getElementById('pl-live-badge');
+  if (!liveEl) {
+    liveEl = document.createElement('div');
+    liveEl.id = 'pl-live-badge';
+    liveEl.style.cssText = 'display:inline-flex;align-items:center;gap:6px;margin-top:8px;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600;letter-spacing:.04em;';
+    const plateInfo = document.getElementById('pl-plate')?.closest('.plate-result-info') ||
+                      document.getElementById('pl-plate')?.parentElement;
+    if (plateInfo) plateInfo.appendChild(liveEl);
+  }
+  if (data.liveInGame) {
+    liveEl.style.background    = 'rgba(34,197,94,.15)';
+    liveEl.style.color         = '#22c55e';
+    liveEl.style.border        = '1px solid rgba(34,197,94,.35)';
+    liveEl.innerHTML           = '<span style="width:7px;height:7px;border-radius:50%;background:#22c55e;animation:pulse 1.5s infinite;display:inline-block"></span> LIVE IN-GAME';
+    liveEl.style.display       = 'inline-flex';
+  } else {
+    liveEl.style.background    = 'rgba(148,163,184,.1)';
+    liveEl.style.color         = '#94a3b8';
+    liveEl.style.border        = '1px solid rgba(148,163,184,.2)';
+    liveEl.innerHTML           = '📁 FROM CITATION RECORDS';
+    liveEl.style.display       = 'inline-flex';
+  }
+
   document.getElementById('search-results').style.display = 'block';
   document.getElementById('search-plate-results').style.display = 'block';
 }
 
 // ─── Owner Modal ───────────────────────────────────────────────────────────────
-function openOwnerModal() {
+async function openOwnerModal() {
   if (!plateOwnerData) return;
   const owner = plateOwnerData;
+  currentProfileUsernames['modal'] = owner.username;
 
   // Populate modal fields
   document.getElementById('modal-username').textContent = owner.username;
   document.getElementById('modal-robloxid').textContent = owner.robloxId ? `Roblox ID: ${owner.robloxId}` : '';
 
-  const { gender, height } = estimateHeightGender(owner.username);
-  document.getElementById('modal-height').textContent  = height;
-  document.getElementById('modal-gender').textContent  = capitalize(gender);
-  document.getElementById('modal-skin').textContent    = 'Analyzing...';
-  document.getElementById('modal-hair').textContent    = 'Analyzing...';
+  const inchTotal = estimateHeight(owner.username, '');
+  const ft = Math.floor(inchTotal / 12), inch = inchTotal % 12;
+  const defaultHeight = `${ft}'${inch}"`;
+
+  // Load overrides
+  let overrides = {};
+  try {
+    const ovRes = await fetch(`/api/profile-overrides/${encodeURIComponent(owner.username)}`);
+    if (ovRes.ok) overrides = await ovRes.json();
+  } catch (_) {}
+
+  document.getElementById('modal-skin').value   = overrides.skin   || 'Unknown';
+  document.getElementById('modal-hair').value   = overrides.hair   || 'Unknown';
+  document.getElementById('modal-height').value = overrides.height || defaultHeight;
+  document.getElementById('modal-gender').value = overrides.gender || 'Unknown';
 
   // Citations
   const citations = owner.citations || [];
@@ -793,17 +874,18 @@ function openOwnerModal() {
     ? warrants.map(w => `<div class="record-mini-item" style="border-left:3px solid var(--accent)"><strong>${escapeHtml(w.wantedFor)}</strong><div style="font-size:11px;color:var(--text-dim);margin-top:2px">${new Date(w.timestamp).toLocaleDateString()}</div></div>`).join('')
     : '<div class="record-mini-none">No active warrants.</div>';
 
-  // Mugshot
+  // Mugshot — headshot only
   const avatarImg = document.getElementById('modal-mugshot-avatar');
-  if (owner.fullAvatar) {
-    avatarImg.src   = owner.fullAvatar;
+  if (owner.headshot) {
+    avatarImg.src = owner.headshot;
     avatarImg.style.display = 'block';
-    analyzeAvatarAppearance(owner.fullAvatar, owner.username, 'modal');
   } else {
     avatarImg.style.display = 'none';
   }
 
-  buildRuler('modal-mugshot-ruler', height, gender);
+  // Label
+  const lbl = document.getElementById('modal-mugshot-label');
+  if (lbl) lbl.textContent = `MONTANA MDT · ${owner.username.toUpperCase()}`;
 
   document.getElementById('owner-modal').style.display = 'flex';
   document.body.style.overflow = 'hidden';

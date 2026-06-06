@@ -176,6 +176,18 @@ router.get('/erlc/server', async (req, res) => {
     }
 });
 
+router.get('/erlc/vehicles', async (req, res) => {
+    try {
+        const r    = await fetch('https://api.erlc.gg/v2/server?Vehicles=true', {
+            headers: { 'server-key': ERLC_KEY },
+        });
+        const data = await r.json();
+        res.json(Array.isArray(data.Vehicles) ? data.Vehicles : []);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // ─── Logs ─────────────────────────────────────────────────────────────────────
 
 router.get('/logs', (req, res) => {
@@ -457,21 +469,41 @@ router.get('/roblox/profile/:username', async (req, res) => {
     });
 });
 
-// Plate lookup — searches citation logs for matching plate
+// Plate lookup — checks live ER:LC server vehicles first, then falls back to citation logs
 router.get('/search/plate/:plate', async (req, res) => {
     const plate = req.params.plate.toUpperCase();
     const logs  = readData('logs.json');
 
-    // Find the most recent citation with this plate
-    const matches = logs
+    // ── 1. Query live ER:LC vehicles ──────────────────────────────────────────
+    let liveVehicle = null;
+    let liveOwnerUsername = null;
+    try {
+        const erlcRes  = await fetch('https://api.erlc.gg/v2/server?Vehicles=true', {
+            headers: { 'server-key': ERLC_KEY },
+        });
+        const erlcData = await erlcRes.json();
+        const vehicles = Array.isArray(erlcData.Vehicles) ? erlcData.Vehicles : [];
+
+        // ER:LC vehicle objects: { Name, Owner, Plate, ... }
+        const match = vehicles.find(v => v.Plate && v.Plate.toUpperCase() === plate);
+        if (match) {
+            liveVehicle       = match;
+            liveOwnerUsername = match.Owner || null; // Roblox username of the driver
+        }
+    } catch (_) { /* ER:LC unavailable — fall through to logs */ }
+
+    // ── 2. Find citation-log history for this plate ────────────────────────────
+    const logMatches = logs
         .filter(l => l.type === 'citation' && l.licensePlate && l.licensePlate.toUpperCase() === plate)
         .sort((a, b) => b.timestamp - a.timestamp);
 
-    if (!matches.length) return res.json({ found: false });
+    // Determine which username to look up — prefer live driver, else last citation owner
+    const resolvedUsername = liveOwnerUsername || (logMatches.length ? logMatches[0].username : null);
 
-    const latest = matches[0];
-    // Also pull full profile for the owner
-    const roblox = await getRobloxUser(latest.username);
+    if (!liveVehicle && !logMatches.length) return res.json({ found: false });
+
+    // ── 3. Resolve Roblox profile ──────────────────────────────────────────────
+    const roblox = resolvedUsername ? await getRobloxUser(resolvedUsername) : null;
     const [headshot, fullAvatar] = roblox ? await Promise.all([
         getRobloxHeadshot(roblox.id),
         getRobloxFullAvatar(roblox.id),
@@ -480,18 +512,25 @@ router.get('/search/plate/:plate', async (req, res) => {
     const allLogs  = readData('logs.json');
     const warrants = readData('warrants.json');
 
-    const citations = allLogs.filter(l => l.type === 'citation' && l.username.toLowerCase() === latest.username.toLowerCase());
-    const arrests   = allLogs.filter(l => l.type === 'arrest'   && l.username.toLowerCase() === latest.username.toLowerCase());
-    const activeWarrants = warrants.filter(w => w.username.toLowerCase() === latest.username.toLowerCase() && w.status === 'active');
+    const username = resolvedUsername || 'Unknown';
+    const citations      = allLogs.filter(l => l.type === 'citation' && l.username.toLowerCase() === username.toLowerCase());
+    const arrests        = allLogs.filter(l => l.type === 'arrest'   && l.username.toLowerCase() === username.toLowerCase());
+    const activeWarrants = warrants.filter(w => w.username.toLowerCase() === username.toLowerCase() && w.status === 'active');
+
+    // Vehicle details: live data takes priority, log data as fallback
+    const vehicleName = liveVehicle?.Name  || logMatches[0]?.vehicle      || null;
+    const vehicleColor= liveVehicle?.Color || logMatches[0]?.color        || null;
+    const vehiclePlate= liveVehicle?.Plate || logMatches[0]?.licensePlate || plate;
 
     res.json({
-        found:    true,
-        vehicle:  latest.vehicle,
-        plate:    latest.licensePlate,
-        color:    latest.color,
+        found:      true,
+        liveInGame: !!liveVehicle,           // flag for frontend badge
+        vehicle:    vehicleName,
+        plate:      vehiclePlate,
+        color:      vehicleColor,
         owner: {
-            username:    latest.username,
-            robloxId:    roblox?.id || null,
+            username,
+            robloxId:    roblox?.id  || null,
             robloxUrl:   roblox?.url || null,
             headshot,
             fullAvatar,
@@ -529,6 +568,30 @@ router.get('/export/logs', async (req, res) => {
 // ─── Map image proxy ──────────────────────────────────────────────────────────
 router.get('/map-image', (req, res) => {
     res.sendFile(path.join(__dirname, '../public/images/erlc-map.webp'));
+});
+
+// ─── Profile overrides (manual edits to skin/hair/height/gender) ──────────────
+
+router.get('/profile-overrides/:username', (req, res) => {
+    const overrides = readData('profile-overrides.json');
+    const entry = overrides.find(o => o.username.toLowerCase() === req.params.username.toLowerCase());
+    res.json(entry ? entry.fields : {});
+});
+
+router.post('/profile-overrides/:username', (req, res) => {
+    const { skin, hair, height, gender } = req.body;
+    const username = req.params.username;
+    let overrides = readData('profile-overrides.json');
+    const idx = overrides.findIndex(o => o.username.toLowerCase() === username.toLowerCase());
+    const fields = { skin: skin || '', hair: hair || '', height: height || '', gender: gender || '' };
+    if (idx >= 0) {
+        overrides[idx].fields = fields;
+        overrides[idx].updatedAt = Date.now();
+    } else {
+        overrides.push({ username, fields, updatedAt: Date.now() });
+    }
+    writeData('profile-overrides.json', overrides);
+    res.json({ success: true });
 });
 
 module.exports = router;

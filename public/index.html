@@ -224,11 +224,12 @@
               <div class="search-person-robloxid" id="sp-robloxid"></div>
 
               <div class="search-person-fields">
-                <div class="spf-row"><span class="spf-label">Skin Color</span><span class="spf-value" id="sp-skin">Analyzing...</span></div>
-                <div class="spf-row"><span class="spf-label">Hair Color</span><span class="spf-value" id="sp-hair">Analyzing...</span></div>
-                <div class="spf-row"><span class="spf-label">Height</span><span class="spf-value" id="sp-height">—</span></div>
-                <div class="spf-row"><span class="spf-label">Gender (est.)</span><span class="spf-value" id="sp-gender">—</span></div>
+                <div class="spf-row"><span class="spf-label">Skin Color</span><input class="spf-input" id="sp-skin" placeholder="Unknown"></div>
+                <div class="spf-row"><span class="spf-label">Hair Color</span><input class="spf-input" id="sp-hair" placeholder="Unknown"></div>
+                <div class="spf-row"><span class="spf-label">Height</span><input class="spf-input" id="sp-height" placeholder="—"></div>
+                <div class="spf-row"><span class="spf-label">Gender (est.)</span><input class="spf-input" id="sp-gender" placeholder="—"></div>
               </div>
+              <button class="spf-save-btn" id="sp-save-btn" onclick="saveProfileOverrides('sp')">💾 Save Changes</button>
 
               <div class="search-record-section">
                 <div class="search-record-title">📄 Citations <span class="record-count" id="sp-citation-count">0</span></div>
@@ -248,9 +249,9 @@
           <!-- Right: mugshot -->
           <div class="search-mugshot-col">
             <div class="mugshot-frame">
-              <div class="mugshot-ruler" id="mugshot-ruler"></div>
-              <div class="mugshot-subject">
-                <img id="mugshot-avatar" src="" alt="Avatar" class="mugshot-avatar-img">
+              <div class="mugshot-bg" style="background-image:url('/images/mugshot-bg.webp')"></div>
+              <div class="mugshot-head-wrap">
+                <img id="mugshot-avatar" src="" alt="Avatar" class="mugshot-head-img">
               </div>
               <div class="mugshot-label" id="mugshot-label">MONTANA MDT</div>
             </div>
@@ -357,11 +358,12 @@
         <div class="search-person-name" id="modal-username">—</div>
         <div class="search-person-robloxid" id="modal-robloxid"></div>
         <div class="search-person-fields">
-          <div class="spf-row"><span class="spf-label">Skin Color</span><span class="spf-value" id="modal-skin">—</span></div>
-          <div class="spf-row"><span class="spf-label">Hair Color</span><span class="spf-value" id="modal-hair">—</span></div>
-          <div class="spf-row"><span class="spf-label">Height</span><span class="spf-value" id="modal-height">—</span></div>
-          <div class="spf-row"><span class="spf-label">Gender (est.)</span><span class="spf-value" id="modal-gender">—</span></div>
+          <div class="spf-row"><span class="spf-label">Skin Color</span><input class="spf-input" id="modal-skin" placeholder="Unknown"></div>
+          <div class="spf-row"><span class="spf-label">Hair Color</span><input class="spf-input" id="modal-hair" placeholder="Unknown"></div>
+          <div class="spf-row"><span class="spf-label">Height</span><input class="spf-input" id="modal-height" placeholder="—"></div>
+          <div class="spf-row"><span class="spf-label">Gender (est.)</span><input class="spf-input" id="modal-gender" placeholder="—"></div>
         </div>
+        <button class="spf-save-btn" id="modal-save-btn" onclick="saveProfileOverrides('modal')">💾 Save Changes</button>
         <div class="search-record-section">
           <div class="search-record-title">📄 Citations <span class="record-count" id="modal-citation-count">0</span></div>
           <div id="modal-citations-list" class="record-mini-list"></div>
@@ -377,11 +379,11 @@
       </div>
       <div class="modal-mugshot-col">
         <div class="mugshot-frame">
-          <div class="mugshot-ruler" id="modal-mugshot-ruler"></div>
-          <div class="mugshot-subject">
-            <img id="modal-mugshot-avatar" src="" alt="Avatar" class="mugshot-avatar-img">
+          <div class="mugshot-bg" style="background-image:url('/images/mugshot-bg.webp')"></div>
+          <div class="mugshot-head-wrap">
+            <img id="modal-mugshot-avatar" src="" alt="Avatar" class="mugshot-head-img">
           </div>
-          <div class="mugshot-label">MONTANA MDT</div>
+          <div class="mugshot-label" id="modal-mugshot-label">MONTANA MDT</div>
         </div>
       </div>
     </div>

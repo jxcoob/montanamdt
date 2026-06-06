@@ -483,6 +483,38 @@ body {
 .spf-value {
   font-size: 14px; color: var(--text); font-weight: 600;
 }
+.spf-input {
+  flex: 1;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 5px 10px;
+  outline: none;
+  transition: border-color 0.15s;
+  font-family: inherit;
+}
+.spf-input:focus { border-color: var(--accent); }
+.spf-save-btn {
+  display: block;
+  width: calc(100% - 32px);
+  margin: 10px 16px 16px;
+  padding: 10px 0;
+  background: rgba(34,197,94,.12);
+  border: 1px solid rgba(34,197,94,.4);
+  border-radius: 8px;
+  color: #22c55e;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+.spf-save-btn:hover { background: rgba(34,197,94,.22); border-color: #22c55e; }
+.spf-save-btn:disabled { opacity: .5; cursor: default; }
 .plate-badge {
   font-family: monospace; font-size: 16px; font-weight: 800;
   background: var(--surface3); border: 1px solid var(--border);
@@ -518,90 +550,67 @@ body {
 .search-mugshot-col {}
 
 .mugshot-frame {
-  background: #f0ebe0;
   border: 3px solid #888;
   border-radius: 4px;
   position: relative;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  min-height: 520px;
+  min-height: 300px;
+  width: 220px;
   box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+  background: #d8e2e8;
 }
 
-.mugshot-ruler {
+/* Lined background fills the frame behind everything */
+.mugshot-bg {
   position: absolute;
-  top: 0; bottom: 36px;
-  left: 0;
-  width: 52px;
-  background: #e8e0cc;
-  border-right: 2px solid #bbb;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 12px 0;
-  z-index: 2;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  z-index: 0;
 }
 
-.ruler-mark {
-  display: flex; align-items: center;
-  padding-left: 4px;
-  position: relative;
-}
-.ruler-mark-line {
-  position: absolute;
-  right: 0;
-  height: 2px;
-  background: #666;
-}
-.ruler-mark-line.major { width: 14px; background: #333; }
-.ruler-mark-line.minor { width: 8px; }
-.ruler-mark-text {
-  font-size: 10px; font-weight: 900; color: #333;
-  font-family: 'Arial Narrow', Arial, sans-serif;
-  line-height: 1;
-  padding-right: 18px;
-}
-
-.mugshot-subject {
+/* Head image centered in the frame */
+.mugshot-head-wrap {
   flex: 1;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
-  padding-left: 52px;
   position: relative;
-  background: #f0ebe0;
+  z-index: 1;
+  padding: 20px 10px 10px;
 }
 
-.mugshot-avatar-img {
-  width: 320px;
-  height: auto;
+.mugshot-head-img {
+  width: 180px;
+  height: 180px;
   display: block;
-  image-rendering: pixelated;
   object-fit: contain;
-  object-position: bottom;
+  image-rendering: pixelated;
+  /* drop shadow to make head pop off the lined bg */
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.45));
 }
 
-.mugshot-height-line {
-  position: absolute;
-  left: 52px; right: 0;
-  height: 2px;
-  background: rgba(255,0,0,0.5);
-  pointer-events: none;
-  z-index: 3;
-}
+/* Legacy compat — hide old ruler/subject if they slip through */
+.mugshot-ruler { display: none !important; }
+.mugshot-subject { display: none !important; }
+.mugshot-avatar-img { display: none !important; }
+
+.mugshot-height-line { display: none !important; }
 
 .mugshot-label {
-  background: #222;
-  color: #f0ebe0;
+  background: #111;
+  color: #e8ecef;
   text-align: center;
   padding: 8px;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 900;
   letter-spacing: 3px;
   font-family: 'Courier New', monospace;
   flex-shrink: 0;
   z-index: 2;
+  position: relative;
 }
 
 /* Vehicle image frame */
@@ -675,5 +684,11 @@ body {
   align-items: start;
 }
 .modal-info-col {}
-.modal-mugshot-col .mugshot-frame { min-height: 420px; }
-.modal-mugshot-col .mugshot-avatar-img { width: 260px; }
+.modal-mugshot-col .mugshot-frame { min-height: 280px; width: 220px; }
+.modal-mugshot-col .mugshot-head-img { width: 180px; height: 180px; }
+
+/* ── Live in-game badge pulse animation ─────────────────────────────────── */
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: .5; transform: scale(1.3); }
+}
