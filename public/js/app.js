@@ -410,28 +410,52 @@ function renderMapDots(players) {
 
   overlay.innerHTML = '';
 
-  // Filter by team
-  const teamFilter = mapMode === 'sheriff' ? 'Sheriff' : 'Police';
-  const filtered   = players.filter(p => p.Team && p.Team.includes(teamFilter));
+  if (!Array.isArray(players) || !players.length) {
+    const msg = document.createElement('div');
+    msg.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#9499c0;font-size:14px;';
+    msg.textContent = 'No units online';
+    overlay.appendChild(msg);
+    return;
+  }
+
+  // ERLC API: Team field can be "Sheriff", "Police", "Civilian", etc.
+  // Support flexible matching for team name variations
+  const isSheriff = (t) => t && (t.toLowerCase().includes('sheriff') || t.toLowerCase().includes('so'));
+  const isPolice  = (t) => t && (t.toLowerCase().includes('police') || t.toLowerCase().includes('pd') || t.toLowerCase().includes('mhp') || t.toLowerCase().includes('patrol'));
+
+  const filtered = players.filter(p => {
+    const team = p.Team || p.team || '';
+    if (mapMode === 'sheriff') return isSheriff(team);
+    if (mapMode === 'police')  return isPolice(team);
+    return false;
+  });
+
+  if (!filtered.length) {
+    const msg = document.createElement('div');
+    msg.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#9499c0;font-size:14px;';
+    msg.textContent = 'No ' + (mapMode === 'sheriff' ? 'Sheriff' : 'Police') + ' units online';
+    overlay.appendChild(msg);
+    return;
+  }
 
   filtered.forEach(p => {
-    if (!p.Position) return;
-    // ERLC map bounds (approximate)
-    const mapW = mapImg.clientWidth;
-    const mapH = mapImg.clientHeight;
+    // Support both Position object and flat x/z fields
+    const pos = p.Position || p.position || null;
+    const x   = pos ? (pos.x ?? pos.X ?? 0) : (p.x ?? p.X ?? 0);
+    const z   = pos ? (pos.z ?? pos.Z ?? 0) : (p.z ?? p.Z ?? 0);
 
-    // Normalize position — ERLC uses X/Z for horizontal plane
-    const xNorm = (p.Position.x + 3000) / 6000;
-    const zNorm = (p.Position.z + 3000) / 6000;
+    // ERLC Perpington map bounds
+    const xNorm = (x + 3000) / 6000;
+    const zNorm = (z + 3000) / 6000;
 
     const dot = document.createElement('div');
-    dot.className = `map-unit-dot ${mapMode}`;
-    dot.style.left = `${Math.min(Math.max(xNorm * 100, 0), 100)}%`;
-    dot.style.top  = `${Math.min(Math.max(zNorm * 100, 0), 100)}%`;
+    dot.className = 'map-unit-dot ' + mapMode;
+    dot.style.left = Math.min(Math.max(xNorm * 100, 0), 100) + '%';
+    dot.style.top  = Math.min(Math.max(zNorm * 100, 0), 100) + '%';
 
     const tooltip = document.createElement('div');
     tooltip.className = 'map-tooltip';
-    tooltip.textContent = p.Player || 'Unknown';
+    tooltip.textContent = (p.Player || p.player || p.Username || p.username || 'Unknown') + (p.Team ? ' [' + p.Team + ']' : '');
     dot.appendChild(tooltip);
 
     dot.addEventListener('mouseenter', () => tooltip.style.display = 'block');
