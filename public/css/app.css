@@ -41,11 +41,12 @@ body {
 }
 
 .nav-logo {
-  width: 48px; height: 48px;
+  width: 52px; height: 52px;
   object-fit: contain;
-  border-radius: 50%;
+  border-radius: 0;
   margin-right: 12px;
   flex-shrink: 0;
+  image-rendering: crisp-edges;
 }
 
 .nav-btn {
