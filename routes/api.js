@@ -1,12 +1,11 @@
 const express = require('express');
 const fetch   = require('node-fetch');
-const fs      = require('fs');
 const path    = require('path');
 const router  = express.Router();
+const { readData, writeData } = require('../db');
 
 const BOT_TOKEN  = process.env.TOKEN;
 const ERLC_KEY   = process.env.ERLC_API_KEY;
-const DATA_DIR   = path.join(__dirname, '..', 'data');
 
 // Supervisor role in main server
 const SUPERVISOR_GUILD_ID = '1490470605194137662'; // main server
@@ -31,15 +30,6 @@ const DEPT_CONFIG = {
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function readData(file) {
-    try { return JSON.parse(fs.readFileSync(path.join(DATA_DIR, file), 'utf8')); }
-    catch { return []; }
-}
-
-function writeData(file, data) {
-    fs.writeFileSync(path.join(DATA_DIR, file), JSON.stringify(data, null, 2));
-}
 
 function generateId() {
     return Date.now().toString(36).toUpperCase() + Math.random().toString(36).substr(2, 4).toUpperCase();
@@ -190,12 +180,12 @@ router.get('/erlc/vehicles', async (req, res) => {
 
 // ─── Logs ─────────────────────────────────────────────────────────────────────
 
-router.get('/logs', (req, res) => {
-    res.json(readData('logs.json'));
+router.get('/logs', async (req, res) => {
+    res.json(await readData('logs.json'));
 });
 
-router.get('/warrants', (req, res) => {
-    res.json(readData('warrants.json'));
+router.get('/warrants', async (req, res) => {
+    res.json(await readData('warrants.json'));
 });
 
 // ─── Submit Citation ──────────────────────────────────────────────────────────
@@ -244,9 +234,9 @@ router.post('/log/citation', async (req, res) => {
 
     await sendDiscordMessage(dept.channels.citation, payload);
 
-    const logs = readData('logs.json');
+    const logs = await readData('logs.json');
     logs.push({ id, type: 'citation', department, username, citedFor, fineAmount, vehicle: vehicle || null, licensePlate: licensePlate || null, color: color || null, issuedBy: user.username, issuedById: user.id, timestamp: Date.now(), voided: false });
-    writeData('logs.json', logs);
+    await writeData('logs.json', logs);
 
     res.json({ success: true, id });
 });
@@ -294,9 +284,9 @@ router.post('/log/arrest', async (req, res) => {
 
     await sendDiscordMessage(dept.channels.arrest, payload);
 
-    const logs = readData('logs.json');
+    const logs = await readData('logs.json');
     logs.push({ id, type: 'arrest', department, username, charges, issuedBy: user.username, issuedById: user.id, timestamp: Date.now(), voided: false });
-    writeData('logs.json', logs);
+    await writeData('logs.json', logs);
 
     res.json({ success: true, id });
 });
@@ -342,9 +332,9 @@ router.post('/log/incident', async (req, res) => {
 
     await sendDiscordMessage(dept.channels.incident, payload);
 
-    const logs = readData('logs.json');
+    const logs = await readData('logs.json');
     logs.push({ id, type: 'incident', department, leos, location, description, issuedBy: user.username, issuedById: user.id, timestamp: Date.now(), voided: false });
-    writeData('logs.json', logs);
+    await writeData('logs.json', logs);
 
     res.json({ success: true, id });
 });
@@ -356,7 +346,7 @@ router.patch('/log/:id/void', async (req, res) => {
     const sup  = await isSupervisor(user.id);
     if (!sup) return res.status(403).json({ error: 'Supervisor access required.' });
 
-    const logs = readData('logs.json');
+    const logs = await readData('logs.json');
     const log  = logs.find(l => l.id === req.params.id);
     if (!log) return res.status(404).json({ error: 'Log not found.' });
 
@@ -364,7 +354,7 @@ router.patch('/log/:id/void', async (req, res) => {
     log.voidedBy   = user.username;
     log.voidedById = user.id;
     log.voidedAt   = Date.now();
-    writeData('logs.json', logs);
+    await writeData('logs.json', logs);
     res.json({ success: true });
 });
 
@@ -379,19 +369,19 @@ router.post('/log/warrant', async (req, res) => {
     const headshot  = roblox ? await getRobloxHeadshot(roblox.id) : null;
     const robloxUrl = roblox ? roblox.url : null;
 
-    const warrants = readData('warrants.json');
+    const warrants = await readData('warrants.json');
     warrants.push({ id, username, wantedFor, additionalInfo: additionalInfo || null, issuedBy: user.username, issuedById: user.id, timestamp: Date.now(), status: 'active', robloxUrl, headshot });
-    writeData('warrants.json', warrants);
+    await writeData('warrants.json', warrants);
 
     res.json({ success: true, id });
 });
 
-router.patch('/warrant/:id/complete', (req, res) => {
-    const warrants = readData('warrants.json');
+router.patch('/warrant/:id/complete', async (req, res) => {
+    const warrants = await readData('warrants.json');
     const w        = warrants.find(x => x.id === req.params.id);
     if (!w) return res.status(404).json({ error: 'Not found' });
     w.status = 'completed';
-    writeData('warrants.json', warrants);
+    await writeData('warrants.json', warrants);
     res.json({ success: true });
 });
 
@@ -399,33 +389,33 @@ router.delete('/warrant/:id', async (req, res) => {
     const user = req.session.user;
     const sup  = await isSupervisor(user.id);
     if (!sup) return res.status(403).json({ error: 'Supervisor access required to delete warrants.' });
-    let warrants = readData('warrants.json');
+    let warrants = await readData('warrants.json');
     warrants     = warrants.filter(x => x.id !== req.params.id);
-    writeData('warrants.json', warrants);
+    await writeData('warrants.json', warrants);
     res.json({ success: true });
 });
 
 // ─── Notes ────────────────────────────────────────────────────────────────────
 
-router.get('/notes', (req, res) => {
-    const all = readData('notes.json');
+router.get('/notes', async (req, res) => {
+    const all = await readData('notes.json');
     res.json(all.filter(n => n.userId === req.session.user.id));
 });
 
-router.post('/notes', (req, res) => {
+router.post('/notes', async (req, res) => {
     const { note } = req.body;
     const user     = req.session.user;
     const id       = generateId();
-    const notes    = readData('notes.json');
+    const notes    = await readData('notes.json');
     notes.push({ id, note, userId: user.id, username: user.username, timestamp: Date.now() });
-    writeData('notes.json', notes);
+    await writeData('notes.json', notes);
     res.json({ success: true, id });
 });
 
-router.delete('/notes/:id', (req, res) => {
-    let notes = readData('notes.json');
+router.delete('/notes/:id', async (req, res) => {
+    let notes = await readData('notes.json');
     notes     = notes.filter(n => !(n.id === req.params.id && n.userId === req.session.user.id));
-    writeData('notes.json', notes);
+    await writeData('notes.json', notes);
     res.json({ success: true });
 });
 
@@ -450,8 +440,8 @@ router.get('/roblox/profile/:username', async (req, res) => {
     ]);
 
     // Pull citation/arrest history and warrants for this username
-    const logs     = readData('logs.json');
-    const warrants = readData('warrants.json');
+    const logs     = await readData('logs.json');
+    const warrants = await readData('warrants.json');
 
     const citations = logs.filter(l => l.type === 'citation' && l.username.toLowerCase() === username.toLowerCase());
     const arrests   = logs.filter(l => l.type === 'arrest'   && l.username.toLowerCase() === username.toLowerCase());
@@ -472,7 +462,7 @@ router.get('/roblox/profile/:username', async (req, res) => {
 // Plate lookup — checks live ER:LC server vehicles first, then falls back to citation logs
 router.get('/search/plate/:plate', async (req, res) => {
     const plate = req.params.plate.toUpperCase();
-    const logs  = readData('logs.json');
+    const logs  = await readData('logs.json');
 
     // ── 1. Query live ER:LC vehicles ──────────────────────────────────────────
     let liveVehicle = null;
@@ -509,8 +499,8 @@ router.get('/search/plate/:plate', async (req, res) => {
         getRobloxFullAvatar(roblox.id),
     ]) : [null, null];
 
-    const allLogs  = readData('logs.json');
-    const warrants = readData('warrants.json');
+    const allLogs  = await readData('logs.json');
+    const warrants = await readData('warrants.json');
 
     const username = resolvedUsername || 'Unknown';
     const citations      = allLogs.filter(l => l.type === 'citation' && l.username.toLowerCase() === username.toLowerCase());
@@ -548,7 +538,7 @@ router.get('/export/logs', async (req, res) => {
     const sup  = await isSupervisor(user.id);
     if (!sup) return res.status(403).json({ error: 'Supervisor access required.' });
 
-    const logs = readData('logs.json');
+    const logs = await readData('logs.json');
     const type = req.query.type;
     const filtered = type ? logs.filter(l => l.type === type) : logs;
 
@@ -572,16 +562,16 @@ router.get('/map-image', (req, res) => {
 
 // ─── Profile overrides (manual edits to skin/hair/height/gender) ──────────────
 
-router.get('/profile-overrides/:username', (req, res) => {
-    const overrides = readData('profile-overrides.json');
+router.get('/profile-overrides/:username', async (req, res) => {
+    const overrides = await readData('profile-overrides.json');
     const entry = overrides.find(o => o.username.toLowerCase() === req.params.username.toLowerCase());
     res.json(entry ? entry.fields : {});
 });
 
-router.post('/profile-overrides/:username', (req, res) => {
+router.post('/profile-overrides/:username', async (req, res) => {
     const { skin, hair, height, gender } = req.body;
     const username = req.params.username;
-    let overrides = readData('profile-overrides.json');
+    let overrides = await readData('profile-overrides.json');
     const idx = overrides.findIndex(o => o.username.toLowerCase() === username.toLowerCase());
     const fields = { skin: skin || '', hair: hair || '', height: height || '', gender: gender || '' };
     if (idx >= 0) {
@@ -590,7 +580,7 @@ router.post('/profile-overrides/:username', (req, res) => {
     } else {
         overrides.push({ username, fields, updatedAt: Date.now() });
     }
-    writeData('profile-overrides.json', overrides);
+    await writeData('profile-overrides.json', overrides);
     res.json({ success: true });
 });
 

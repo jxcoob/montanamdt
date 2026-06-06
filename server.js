@@ -1,22 +1,15 @@
-const express        = require('express');
-const session        = require('express-session');
-const path           = require('path');
-const fs             = require('fs');
-const authRoutes     = require('./routes/auth');
-const apiRoutes      = require('./routes/api');
+const express         = require('express');
+const session         = require('express-session');
+const MongoStore      = require('connect-mongo');
+const path            = require('path');
+const authRoutes      = require('./routes/auth');
+const apiRoutes       = require('./routes/api');
 const { requireAuth } = require('./middleware/auth');
-const keep_alive = require('./keep_alive.js')
+const keep_alive      = require('./keep_alive.js');
+const { MONGODB_URI } = require('./db'); // triggers DB connection on startup
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
-
-// Ensure data dir exists
-const DATA_DIR = path.join(__dirname, 'data');
-if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-['logs.json', 'warrants.json', 'notes.json'].forEach(f => {
-    const fp = path.join(DATA_DIR, f);
-    if (!fs.existsSync(fp)) fs.writeFileSync(fp, JSON.stringify([]));
-});
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -26,7 +19,11 @@ app.use(session({
     secret:            process.env.SESSION_SECRET || 'mdt-secret-key',
     resave:            false,
     saveUninitialized: false,
-    cookie:            { maxAge: 48 * 60 * 60 * 1000 } // 48 hours
+    cookie:            { maxAge: 48 * 60 * 60 * 1000 }, // 48 hours
+    // Sessions stored in MongoDB — survive restarts & redeploys for free
+    store: MONGODB_URI
+        ? MongoStore.create({ mongoUrl: MONGODB_URI, dbName: 'montanamdt', collectionName: 'sessions' })
+        : undefined, // falls back to in-memory if no URI set
 }));
 
 app.use('/auth', authRoutes);
