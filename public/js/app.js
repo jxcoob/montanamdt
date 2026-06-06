@@ -436,10 +436,9 @@ function renderMapDots(players) {
     const x = loc.LocationX;
     const z = loc.LocationZ;
 
-    // Official PRC map image coordinate bounds (Roblox studs)
-    // These exactly match api.policeroleplay.community/maps/fall_postals.png
-    const MAP_X_MIN = -3000, MAP_X_MAX = 3000;
-    const MAP_Z_MIN = -3000, MAP_Z_MAX = 3000;
+    // ERLC Fall City map coordinate bounds (Roblox studs)
+    const MAP_X_MIN = -2953, MAP_X_MAX = 2953;
+    const MAP_Z_MIN = -2500, MAP_Z_MAX = 2500;
     const xNorm = (x - MAP_X_MIN) / (MAP_X_MAX - MAP_X_MIN);
     const zNorm = (z - MAP_Z_MIN) / (MAP_Z_MAX - MAP_Z_MIN);
 
