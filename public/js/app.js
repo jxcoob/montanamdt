@@ -58,7 +58,9 @@ async function init() {
   }
 
   loadCalls();
+  loadActiveWarrants();
   setInterval(loadCalls, 15000);
+  setInterval(loadActiveWarrants, 15000);
 }
 
 // ─── Tab Navigation ───────────────────────────────────────────────────────────
@@ -198,6 +200,42 @@ async function submitWarrant(e) {
   const data = await res.json();
   if (data.success) { toast('Warrant issued successfully!', 'success'); cancelForm('warrant'); f.reset(); }
   else               toast(data.error || 'Failed to submit.', 'error');
+}
+
+// ─── Active Warrants (MDT page) ───────────────────────────────────────────────
+async function loadActiveWarrants() {
+  try {
+    const res      = await fetch('/api/warrants');
+    const warrants = await res.json();
+    const active   = warrants.filter(w => w.status !== 'completed');
+    renderActiveWarrants(active);
+  } catch { renderActiveWarrants([]); }
+}
+
+function renderActiveWarrants(warrants) {
+  const list = document.getElementById('active-warrants-list');
+  if (!list) return;
+  if (!warrants.length) {
+    list.innerHTML = '<div class="no-calls">No active warrants.</div>';
+    return;
+  }
+  list.innerHTML = warrants.slice().reverse().map(w => `
+    <div class="warrant-card">
+      <div class="warrant-card-title">⚠️ Warrant — ${escapeHtml(w.username)}</div>
+      <div class="call-field">🔍 Wanted for: <span>${escapeHtml(w.wantedFor)}</span></div>
+      ${w.additionalInfo ? `<div class="call-field">📝 Info: <span>${escapeHtml(w.additionalInfo)}</span></div>` : ''}
+      <div class="call-field">👮 Issued by: <span>@${escapeHtml(w.issuedBy)}</span></div>
+      <div class="warrant-card-actions">
+        <button class="btn-green" onclick="completeWarrantMDT('${w.id}')">✓ Mark Completed</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function completeWarrantMDT(id) {
+  await fetch(`/api/warrant/${id}/complete`, { method: 'PATCH' });
+  loadActiveWarrants();
+  loadLogs();
 }
 
 // ─── 911 Calls ────────────────────────────────────────────────────────────────
