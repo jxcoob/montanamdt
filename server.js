@@ -5,6 +5,7 @@ const fs             = require('fs');
 const authRoutes     = require('./routes/auth');
 const apiRoutes      = require('./routes/api');
 const { requireAuth } = require('./middleware/auth');
+const keep_alive = require('./keep_alive.js')
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
