@@ -90,6 +90,12 @@ router.get('/erlc/players', async (req, res) => {
         });
         const data = await r.json();
         const players = data.Players || [];
+        // Debug: log raw coords so we can calibrate the map
+        players.forEach(p => {
+            if (p.Location) {
+                console.log('[MAP DEBUG]', (p.Player||'').split(':')[0], '| Team:', p.Team, '| X:', p.Location.LocationX, 'Z:', p.Location.LocationZ, '| Postal:', p.Location.PostalCode);
+            }
+        });
         res.json(players);
     } catch (err) {
         console.error('[ERLC] Players error:', err.message);
