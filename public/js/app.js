@@ -924,6 +924,30 @@ function toast(msg, type = 'success') {
   setTimeout(() => el.remove(), 3500);
 }
 
+// ─── Theme Toggle ─────────────────────────────────────────────────────────────
+function toggleTheme() {
+  const isLight = document.body.classList.toggle('light-mode');
+  localStorage.setItem('mdt-theme', isLight ? 'light' : 'dark');
+  const label = document.getElementById('theme-label');
+  const track = document.getElementById('theme-track');
+  if (label) label.textContent = isLight ? '☀️ Light' : '🌙 Dark';
+  if (track)  track.classList.toggle('on', isLight);
+}
+
+// Apply saved theme on load
+(function() {
+  const saved = localStorage.getItem('mdt-theme');
+  if (saved === 'light') {
+    document.body.classList.add('light-mode');
+    document.addEventListener('DOMContentLoaded', () => {
+      const label = document.getElementById('theme-label');
+      const track = document.getElementById('theme-track');
+      if (label) label.textContent = '☀️ Light';
+      if (track)  track.classList.add('on');
+    });
+  }
+})();
+
 // ─── Boot ─────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   init();

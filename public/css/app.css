@@ -517,8 +517,8 @@ body {
 /* ─── Supervisor / Role Badge ──────────────────────────────────────────────── */
 .supervisor-badge {
   padding: 4px 12px; border-radius: 5px;
-  background: var(--gold2); border: 1px solid rgba(200,168,75,0.3);
-  color: var(--gold); font-size: 11px; font-weight: 600;
+  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.25);
+  color: #ffffff; font-size: 11px; font-weight: 600;
   letter-spacing: 0.5px; font-family: 'DM Sans', sans-serif; text-transform: uppercase;
 }
 
@@ -599,7 +599,7 @@ body {
 /* Search results layout */
 .search-results-layout {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: 1fr 220px;
   gap: 24px;
   align-items: start;
 }
