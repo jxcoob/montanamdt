@@ -521,6 +521,10 @@ body {
   color: #ffffff; font-size: 11px; font-weight: 600;
   letter-spacing: 0.5px; font-family: 'DM Sans', sans-serif; text-transform: uppercase;
 }
+body.light-mode .supervisor-badge {
+  background: rgba(0,0,0,0.06); border-color: rgba(0,0,0,0.18);
+  color: #000000;
+}
 
 /* ─── Logs Page Header ─────────────────────────────────────────────────────── */
 .logs-page-header {

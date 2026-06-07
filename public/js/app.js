@@ -253,7 +253,8 @@ async function loadCalls() {
 function renderCalls(calls) {
   const list = document.getElementById('calls-list');
   if (!calls.length) { list.innerHTML = '<div class="no-calls">No active 911 calls.</div>'; return; }
-  list.innerHTML = calls.map(c => `
+  const sorted = [...calls].sort((a, b) => (b.StartedAt || 0) - (a.StartedAt || 0));
+  list.innerHTML = sorted.map(c => `
     <div class="call-card">
       <div class="call-card-title">#${c.CallNumber || '—'} · ${c.Team || 'Unknown'} Call</div>
       <div class="call-field">📍 Location: <span>${c.PositionDescriptor || 'Unknown'}</span></div>
