@@ -20,7 +20,7 @@ const UNIT_MAP_GUILDS = [
     { guildId: '1490141856607113278', roleId: '1490209610035105802' },
 ];
 
-const SUPERVISOR_GUILD_ID = '1490470605194137662';
+const SUPERVISOR_GUILD_ID = '1451707915286085706';
 const SUPERVISOR_ROLE_ID  = '1469135279049933007';
 
 router.get('/discord', (req, res) => {
@@ -75,14 +75,24 @@ router.get('/callback', async (req, res) => {
                     hasAccess = true;
                     departments.push({ guildId: g.guildId, name: g.name, roleId: g.roleId });
                 }
-                // Check supervisor role in main server
-                if (g.guildId === SUPERVISOR_GUILD_ID && member.roles && member.roles.includes(SUPERVISOR_ROLE_ID)) {
-                    isSupervisor = true;
-                }
             }
         }
 
         if (!hasAccess) return res.redirect('/denied');
+
+        // Check supervisor role in main server (separate guild, not in MDT_ACCESS_GUILDS)
+        try {
+            const supRes = await fetch(
+                `https://discord.com/api/guilds/${SUPERVISOR_GUILD_ID}/members/${user.id}`,
+                { headers: { Authorization: `Bot ${BOT_TOKEN}` } }
+            );
+            if (supRes.ok) {
+                const supMember = await supRes.json();
+                if (supMember.roles && supMember.roles.includes(SUPERVISOR_ROLE_ID)) {
+                    isSupervisor = true;
+                }
+            }
+        } catch (_) {}
 
         for (const g of UNIT_MAP_GUILDS) {
             const memberRes = await fetch(

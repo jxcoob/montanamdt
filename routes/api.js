@@ -8,7 +8,7 @@ const BOT_TOKEN  = process.env.TOKEN;
 const ERLC_KEY   = process.env.ERLC_API_KEY;
 
 // Supervisor role in main server
-const SUPERVISOR_GUILD_ID = '1490470605194137662'; // main server
+const SUPERVISOR_GUILD_ID = '1451707915286085706'; // main server
 const SUPERVISOR_ROLE_ID  = '1469135279049933007';
 
 const DEPT_CONFIG = {
