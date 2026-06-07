@@ -330,6 +330,9 @@ function renderLogs(logs) {
     const voidBtn = currentUser.isSupervisor && !l.voided
       ? `<button class="btn-red" onclick="voidLog('${l.id}')">Void Log</button>`
       : '';
+    const deleteBtn = currentUser.isSupervisor
+      ? `<button class="btn-red" onclick="deleteLog('${l.id}')" style="background:var(--red-bg);border-color:var(--red);color:var(--red);" onmouseover="this.style.background='var(--red)';this.style.color='#fff'" onmouseout="this.style.background='var(--red-bg)';this.style.color='var(--red)'">🗑 Delete</button>`
+      : '';
 
     return `
       <div class="log-card ${l.voided ? 'voided' : ''}" id="log-${l.id}">
@@ -339,7 +342,7 @@ function renderLogs(logs) {
           ${fields}
           <div class="log-card-meta">Issued by @${escapeHtml(l.issuedBy)} · ${new Date(l.timestamp).toLocaleString()}</div>
           ${l.voided ? `<div class="log-card-meta" style="color:var(--red)">Voided by @${escapeHtml(l.voidedBy)} · ${new Date(l.voidedAt).toLocaleString()}</div>` : ''}
-          <div class="log-card-actions">${voidBtn}</div>
+          <div class="log-card-actions">${voidBtn}${deleteBtn}</div>
         </div>
       </div>
     `;
@@ -351,6 +354,14 @@ async function voidLog(id) {
   const res  = await fetch(`/api/log/${id}/void`, { method: 'PATCH' });
   const data = await res.json();
   if (data.success) { toast('Log voided.', 'success'); loadLogs(); }
+  else               toast(data.error || 'Failed.', 'error');
+}
+
+async function deleteLog(id) {
+  if (!confirm('Permanently delete this log? This cannot be undone.')) return;
+  const res  = await fetch(`/api/log/${id}`, { method: 'DELETE' });
+  const data = await res.json();
+  if (data.success) { toast('Log deleted.', 'success'); loadLogs(); }
   else               toast(data.error || 'Failed.', 'error');
 }
 

@@ -358,6 +358,20 @@ router.patch('/log/:id/void', async (req, res) => {
     res.json({ success: true });
 });
 
+// ─── Delete a log (supervisor only) ───────────────────────────────────────────
+
+router.delete('/log/:id', async (req, res) => {
+    const user = req.session.user;
+    const sup  = await isSupervisor(user.id);
+    if (!sup) return res.status(403).json({ error: 'Supervisor access required to delete logs.' });
+    let logs = await readData('logs.json');
+    const exists = logs.find(l => l.id === req.params.id);
+    if (!exists) return res.status(404).json({ error: 'Log not found.' });
+    logs = logs.filter(l => l.id !== req.params.id);
+    await writeData('logs.json', logs);
+    res.json({ success: true });
+});
+
 // ─── Submit Warrant ───────────────────────────────────────────────────────────
 
 router.post('/log/warrant', async (req, res) => {
