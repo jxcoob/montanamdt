@@ -19,18 +19,21 @@
     </div>
   </div>
 
-  <button class="nav-btn active" id="tab-mdt-btn" onclick="showTab('mdt')">
-    <span class="nav-icon">🖥️</span> MDT
-  </button>
-  <button class="nav-btn" id="tab-search-btn" onclick="showTab('search')">
-    <span class="nav-icon">🔍</span> Search
-  </button>
-  <button class="nav-btn" id="tab-logs-btn" onclick="showTab('logs')">
-    <span class="nav-icon">📋</span> Logs
-  </button>
-  <button class="nav-btn" id="tab-notes-btn" onclick="showTab('notes')">
-    <span class="nav-icon">📝</span> Notes
-  </button>
+  <!-- Desktop nav tabs -->
+  <div class="nav-tabs" id="nav-tabs">
+    <button class="nav-btn active" id="tab-mdt-btn" onclick="showTab('mdt')">
+      <span class="nav-icon">🖥️</span> MDT
+    </button>
+    <button class="nav-btn" id="tab-search-btn" onclick="showTab('search')">
+      <span class="nav-icon">🔍</span> Search
+    </button>
+    <button class="nav-btn" id="tab-logs-btn" onclick="showTab('logs')">
+      <span class="nav-icon">📋</span> Logs
+    </button>
+    <button class="nav-btn" id="tab-notes-btn" onclick="showTab('notes')">
+      <span class="nav-icon">📝</span> Notes
+    </button>
+  </div>
 
   <div class="nav-spacer"></div>
 
@@ -55,7 +58,34 @@
     <span id="nav-username">Loading...</span>
   </div>
   <a href="/auth/logout" class="nav-logout">Sign Out</a>
+
+  <!-- Mobile hamburger -->
+  <button class="nav-hamburger" id="nav-hamburger" onclick="toggleMobileMenu()" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
 </nav>
+
+<!-- Mobile menu drawer -->
+<div class="mobile-menu" id="mobile-menu">
+  <button class="nav-btn" id="mob-tab-mdt-btn" onclick="showTab('mdt');closeMobileMenu()">
+    <span class="nav-icon">🖥️</span> MDT
+  </button>
+  <button class="nav-btn" id="mob-tab-search-btn" onclick="showTab('search');closeMobileMenu()">
+    <span class="nav-icon">🔍</span> Search
+  </button>
+  <button class="nav-btn" id="mob-tab-logs-btn" onclick="showTab('logs');closeMobileMenu()">
+    <span class="nav-icon">📋</span> Logs
+  </button>
+  <button class="nav-btn" id="mob-tab-notes-btn" onclick="showTab('notes');closeMobileMenu()">
+    <span class="nav-icon">📝</span> Notes
+  </button>
+  <div class="mobile-menu-divider"></div>
+  <div class="mobile-menu-user">
+    <span id="mob-nav-username">Loading...</span>
+  </div>
+  <a href="/auth/logout" class="nav-logout" style="width:100%;text-align:center">Sign Out</a>
+</div>
+<div class="mobile-menu-overlay" id="mobile-menu-overlay" onclick="closeMobileMenu()"></div>
 
 <!-- ─── App ─────────────────────────────────────────────────────────────────── -->
 <div id="app">
@@ -398,6 +428,38 @@
   init = async function() {
     await _origInit();
     await populateDeptDropdowns();
+    // sync mobile username display
+    const u = document.getElementById('nav-username');
+    if (u) {
+      new MutationObserver(() => {
+        const m = document.getElementById('mob-nav-username');
+        if (m) m.textContent = u.textContent;
+      }).observe(u, { childList: true, characterData: true, subtree: true });
+      const m = document.getElementById('mob-nav-username');
+      if (m) m.textContent = u.textContent;
+    }
+  };
+
+  function toggleMobileMenu() {
+    const menu = document.getElementById('mobile-menu');
+    const overlay = document.getElementById('mobile-menu-overlay');
+    const open = menu.classList.toggle('open');
+    overlay.classList.toggle('open', open);
+    document.body.style.overflow = open ? 'hidden' : '';
+  }
+  function closeMobileMenu() {
+    document.getElementById('mobile-menu').classList.remove('open');
+    document.getElementById('mobile-menu-overlay').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  // Sync active state to mobile menu buttons
+  const _origShowTab = showTab;
+  showTab = function(tab) {
+    _origShowTab(tab);
+    document.querySelectorAll('.mobile-menu .nav-btn').forEach(b => b.classList.remove('active'));
+    const mob = document.getElementById('mob-tab-' + tab + '-btn');
+    if (mob) mob.classList.add('active');
   };
 </script>
 </body>
