@@ -124,7 +124,10 @@ router.get('/erlc/calls', async (req, res) => {
             headers: { 'server-key': ERLC_KEY },
         });
         const data = await r.json();
-        res.json(Array.isArray(data.EmergencyCalls) ? data.EmergencyCalls : []);
+        const calls = Array.isArray(data.EmergencyCalls) ? data.EmergencyCalls : [];
+        const cutoff = Math.floor(Date.now() / 1000) - 24 * 60 * 60; // 24 hours ago (unix seconds)
+        const recent = calls.filter(c => !c.StartedAt || c.StartedAt >= cutoff);
+        res.json(recent);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
